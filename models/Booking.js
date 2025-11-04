@@ -1,4 +1,3 @@
-// models/Booking.js
 import mongoose from "mongoose";
 
 const bookingSchema = new mongoose.Schema(
@@ -22,10 +21,15 @@ const bookingSchema = new mongoose.Schema(
 
 // ensure index on phone (non-unique)
 bookingSchema.index({ phone: 1 });
-// NEW: Ensure a slot can only ever have at most one booking, globally per slot+centre+date+sport
+
 bookingSchema.index(
   { centre: 1, sport: 1, date: 1, time_slot: 1 },
-  { unique: true },
+  {
+    unique: true,
+    partialFilterExpression: { paid: true },
+    name: "unique_paid_slot",
+  },
+  { unique: true, sparse: true },
 );
 
 const Booking =
