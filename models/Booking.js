@@ -24,7 +24,7 @@ bookingSchema.index({ phone: 1 });
 // Partial unique index: Only enforce uniqueness for PAID bookings
 // This allows multiple incomplete bookings but prevents double-booking of paid slots
 bookingSchema.index(
-  { centre: 1, sport: 1, date: 1, time_slot: 1 },
+  { centre: 1, sport: 1, date: 1, time_slot: 1 }, //how is everything up to date
   {
     unique: true,
     partialFilterExpression: { paid: true },
@@ -37,4 +37,4 @@ const Booking =
 
 export default Booking;
 
-//free-commit-to-reinitialize-db
+//free-commit-to-reinitialize-db-w-index
