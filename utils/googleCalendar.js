@@ -61,10 +61,11 @@ export const ensureAuth = async () => {
     calendar = google.calendar({ version: "v3", auth: oAuth2Client });
   }
   return true;
-}; // Helper to build an ISO string from date + time in a timezone-aware way.
+};
+
+// Helper to build an ISO string from date + time in a timezone-aware way.
 // If zonedTimeToUtc is available use it, otherwise fall back to a safe UTC construction.
 // NOTE: fallback assumes the provided time is local to the timezone parameter or server UTC.
-// It is conservative and works for availability checks in practically all simple deployments.
 const makeISO = (dateISO, timeHHMM, timezone) => {
   // timeHHMM = "08:00"
   if (zonedTimeToUtc) {
@@ -72,15 +73,16 @@ const makeISO = (dateISO, timeHHMM, timezone) => {
     return zonedTimeToUtc(`${dateISO}T${timeHHMM}:00`, timezone).toISOString();
   }
   // fallback: create a Date in the server local timezone by parsing and then convert to ISO.
-  // This is intentionally simple: "YYYY-MM-DDTHH:MM:SS"
   // We append "Z" to treat as UTC time to avoid environment differences.
-  // Note: this will work as a consistent identifier for freebusy queries in most setups.
   return new Date(`${dateISO}T${timeHHMM}:00Z`).toISOString();
 };
 
 export const getBusyForRange = async (timeMinISO, timeMaxISO) => {
   try {
-    await ensureAuth();
+    if (!(await ensureAuth())) {
+      console.warn("Authentication skipped for getBusyForRange.");
+      return [];
+    }
     if (!calendar) return [];
     const resp = await calendar.freebusy.query({
       requestBody: {
@@ -99,6 +101,12 @@ export const getBusyForRange = async (timeMinISO, timeMaxISO) => {
 };
 
 export const getAvailableSlotsForDate = async (dateISO, options = {}) => {
+  // Ensure authentication runs before fetching slots
+  if (!(await ensureAuth())) {
+    console.warn("Authentication skipped for getAvailableSlotsForDate.");
+    return [];
+  }
+
   const timezone = options.timezone || GOOGLE_DEFAULT_TIMEZONE;
   const templateSlots = options.templateSlots || [
     { start: "06:00", end: "07:00" },
@@ -133,16 +141,17 @@ export const getAvailableSlotsForDate = async (dateISO, options = {}) => {
 
     // 2. Mongo: get all paid bookings for this centre/date (optionally, sport)
     let bookedSlots = [];
+    // Hard Normalization function defined here
+    function normalizeSlotString(s) {
+      return String(s || "")
+        .replace(/[\u2013\u2014]/g, "-")
+        .replace(/-/g, " - ")
+        .replace(/\s+-\s+/g, " - ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
     if (Booking && centre) {
-      // Hard Normalization
-      function normalizeSlotString(s) {
-        return String(s || "")
-          .replace(/[\u2013\u2014]/g, "-")
-          .replace(/-/g, " - ")
-          .replace(/\s+-\s+/g, " - ")
-          .replace(/\s+/g, " ")
-          .trim();
-      }
       // Query to block **any** booking for given slot
       const query = { date: dateISO, centre };
       if (sport) query.sport = sport;
@@ -195,72 +204,8 @@ export const getAvailableSlotsForDate = async (dateISO, options = {}) => {
   }
 };
 
-// Get available time slots for a specific date
-export const getAvailableSlots = async (
-  dateISO,
-  timezone = GOOGLE_DEFAULT_TIMEZONE,
-) => {
-  if (!(await ensureAuth())) {
-    throw new Error("Google Calendar authentication failed");
-  }
-
-  try {
-    const startOfDay = new Date(dateISO);
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(dateISO);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    // Get busy slots from calendar
-    const response = await calendar.freebusy.query({
-      requestBody: {
-        timeMin: startOfDay.toISOString(),
-        timeMax: endOfDay.toISOString(),
-        timeZone: timezone,
-        items: [{ id: GOOGLE_CALENDAR_ID }],
-      },
-    });
-
-    // Generate available slots (1-hour slots from 6 AM to 10 PM)
-    const slots = [];
-    const startHour = 6;
-    const endHour = 22; // 10 PM
-
-    for (let hour = startHour; hour < endHour; hour++) {
-      const slotStart = new Date(startOfDay);
-      slotStart.setHours(hour, 0, 0, 0);
-
-      const slotEnd = new Date(slotStart);
-      slotEnd.setHours(hour + 1, 0, 0, 0);
-
-      // Check if this slot is available
-      const isBusy = response.data.calendars[GOOGLE_CALENDAR_ID].busy.some(
-        (busy) => {
-          const busyStart = new Date(busy.start);
-          const busyEnd = new Date(busy.end);
-          return !(slotStart >= busyEnd || slotEnd <= busyStart);
-        },
-      );
-
-      if (!isBusy) {
-        // Format time with leading zeros
-        const startTimeStr = hour.toString().padStart(2, "0") + ":00";
-        const endTimeStr = (hour + 1).toString().padStart(2, "0") + ":00";
-
-        slots.push({
-          start: slotStart,
-          end: slotEnd,
-          formatted: `${startTimeStr} - ${endTimeStr}`,
-        });
-      }
-    }
-
-    return slots;
-  } catch (error) {
-    console.error("Error getting available slots:", error);
-    throw new Error("Failed to fetch available time slots");
-  }
-};
+// --- REMOVED: The old, flawed getAvailableSlots function ---
+// You can now rename all calls to getAvailableSlots to use getAvailableSlotsForDate
 
 // Create a new calendar event
 export const createEvent = async ({
