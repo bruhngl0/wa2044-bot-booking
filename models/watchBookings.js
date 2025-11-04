@@ -11,7 +11,9 @@ async function watchBookings() {
   console.log("👀 Watching for new bookings...");
 
   const collection = mongoose.connection.db.collection("bookings");
-  const changeStream = collection.watch([{ $match: { operationType: "insert" } }]);
+  const changeStream = collection.watch([
+    { $match: { operationType: "insert" } },
+  ]);
 
   changeStream.on("change", (change) => {
     console.log("📥 New booking added:");
