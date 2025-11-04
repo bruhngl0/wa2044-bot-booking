@@ -124,7 +124,7 @@ router.post("/", async (req, res) => {
       booking.markModified("meta");
       await booking.save();
 
-      console.log("Selected sport:", selectedSport);
+      console.log("✅ Selected sport:", selectedSport);
 
       // Send location selection
       await sendLocationSelection(from);
@@ -140,7 +140,7 @@ router.post("/", async (req, res) => {
       booking.markModified("meta");
       await booking.save();
 
-      console.log("Selected location:", selectedLocation);
+      console.log("✅ Selected location:", selectedLocation);
 
       // Get dates with available slots
       let datesWithSlots = await getAvailableDates();
@@ -199,7 +199,7 @@ router.post("/", async (req, res) => {
       booking.markModified("meta"); // Mark meta as modified for MongoDB
       await booking.save();
 
-      console.log("Saved date mapping:", booking.meta.dateMapping);
+      console.log("✅ Saved date mapping:", booking.meta.dateMapping);
 
       await sendListMessage(from, "📅 Select a Date", [
         {
@@ -219,7 +219,7 @@ router.post("/", async (req, res) => {
       if (!booking.meta?.dateMapping) {
         await sendMessage(
           from,
-          'Session expired. Please type "start" to begin again.',
+          '❌ Session expired. Please type "start" to begin again.',
         );
         return res.sendStatus(200);
       }
@@ -229,7 +229,7 @@ router.post("/", async (req, res) => {
       if (!selectedDate) {
         await sendMessage(
           from,
-          'Invalid date selection. Please type "start" to try again.',
+          '❌ Invalid date selection. Please type "start" to try again.',
         );
         return res.sendStatus(200);
       }
@@ -239,7 +239,7 @@ router.post("/", async (req, res) => {
       booking.markModified("meta");
       await booking.save();
 
-      console.log("Saved selected date:", selectedDate);
+      console.log("✅ Saved selected date:", selectedDate);
 
       // Format date for display (Defensive check for date object creation)
       const date = new Date(selectedDate);
@@ -247,7 +247,7 @@ router.post("/", async (req, res) => {
         console.error("Invalid date value in selectedDate:", selectedDate);
         await sendMessage(
           from,
-          'Internal date error. Please type "start" to try again.',
+          '❌ Internal date error. Please type "start" to try again.',
         );
         return res.sendStatus(200);
       }
@@ -269,17 +269,17 @@ router.post("/", async (req, res) => {
       const timePeriodButtons = [
         {
           id: "period_morning",
-          title: "Morning",
+          title: "🌅 Morning",
         },
         {
           id: "period_evening",
-          title: "Evening",
+          title: "🌃 Evening",
         },
       ];
 
       await sendButtonsMessage(
         from,
-        `Select a time period for ${formattedDate}:`,
+        `⏰ Select a time period for ${formattedDate}:`,
         timePeriodButtons,
       );
 
@@ -294,7 +294,7 @@ router.post("/", async (req, res) => {
       if (!selectedDate) {
         await sendMessage(
           from,
-          'Session expired. Please type "start" to begin again.',
+          '❌ Session expired. Please type "start" to begin again.',
         );
         return res.sendStatus(200);
       }
@@ -353,7 +353,7 @@ router.post("/", async (req, res) => {
       if (periodSlots.length === 0) {
         await sendMessage(
           from,
-          `No available slots for ${period} on this date. Please choose another time period or date.`,
+          `❌ No available slots for ${period} on this date. Please choose another time period or date.`,
         );
         return res.sendStatus(200);
       }
@@ -373,12 +373,12 @@ router.post("/", async (req, res) => {
       booking.markModified("meta");
       await booking.save();
 
-      console.log("Saved slot mapping:", booking.meta.slotMapping);
+      console.log("✅ Saved slot mapping:", booking.meta.slotMapping);
 
       // Send time slot selection as a list
-      await sendListMessage(from, "Select a Time Slot", [
+      await sendListMessage(from, "🕒 Select a Time Slot", [
         {
-          title: `${period === "morning" ? "Morning" : "Evening"} Slots`,
+          title: `${period === "morning" ? "🌅 Morning" : "🌃 Evening"} Slots`,
           rows: slotRows,
         },
       ]);
@@ -391,7 +391,7 @@ router.post("/", async (req, res) => {
       await Booking.deleteOne({ phone: from });
       await sendMessage(
         from,
-        "Booking cancelled. Type 'start' to begin a new booking.",
+        "❌ Booking cancelled. Type 'start' to begin a new booking.",
       );
       return res.sendStatus(200);
     }
@@ -438,7 +438,7 @@ router.post("/", async (req, res) => {
       await Booking.deleteOne({ phone: from });
       await sendMessage(
         from,
-        "Booking cancelled. Type 'start' anytime to begin again.",
+        "❌ Booking cancelled. Type 'start' anytime to begin again.",
       );
       return res.sendStatus(200);
     }
@@ -446,13 +446,13 @@ router.post("/", async (req, res) => {
     // Fallback: Unknown command
     await sendMessage(
       from,
-      "I didn't understand that. Type 'start' to begin or 'help' for assistance.",
+      "❓ I didn't understand that. Type 'start' to begin or 'help' for assistance.",
     );
 
     await booking.save();
     return res.sendStatus(200);
   } catch (error) {
-    console.error("Webhook Error:", {
+    console.error("❌ Webhook Error:", {
       message: error.message,
       stack: error.stack,
       requestBody: req.body,
@@ -463,7 +463,7 @@ router.post("/", async (req, res) => {
       const from =
         req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from;
       if (from) {
-        await sendMessage(from, "An error occurred. Please try again.");
+        await sendMessage(from, "❌ An error occurred. Please try again.");
       }
     } catch (e) {
       console.error("Failed to send error message to user:", e);
@@ -527,7 +527,7 @@ const sendSportSelection = async (to) => {
   const sportButtons = [
     {
       id: "sport_pickleball",
-      title: "Pickleball",
+      title: "🏓 Pickleball",
     },
   ];
 
@@ -543,13 +543,13 @@ const sendLocationSelection = async (to) => {
   const locationButtons = [
     {
       id: "location_jw",
-      title: "JW Marriott",
+      title: "🏨 JW Marriott",
     },
   ];
 
   await sendButtonsMessage(
     to,
-    "Select your preferred location:",
+    "📍 Select your preferred location:",
     locationButtons,
   );
 };
@@ -569,7 +569,7 @@ async function handleSlotSelection(phone, booking, msg) {
     if (!timeRange || !date) {
       await sendMessage(
         phone,
-        'Session expired. Please type "start" to begin again.',
+        '❌ Session expired. Please type "start" to begin again.',
       );
       return;
     }
@@ -589,7 +589,7 @@ async function handleSlotSelection(phone, booking, msg) {
     if (!available) {
       await sendMessage(
         phone,
-        "Sorry, this slot is no longer available. Please select a different time slot.",
+        "❌ Sorry, this slot is no longer available. Please select a different time slot.",
       );
       return;
     }
@@ -599,11 +599,6 @@ async function handleSlotSelection(phone, booking, msg) {
     booking.meta.confirmDate = date;
     booking.meta.confirmTime = timeRange;
     booking.markModified("meta");
-
-    //i want to ask user for his name here--------
-
-    //i want to add addons here------------------
-
     // Prepare update payload for persistent booking record
     const amount =
       booking.meta?.price || Number(process.env.DEFAULT_BOOKING_AMOUNT) || 1;
@@ -708,13 +703,13 @@ async function handleSlotSelection(phone, booking, msg) {
     // and send the final confirmation message to the user after payment is captured.
     await sendMessage(
       phone,
-      `Payment sent. We'll confirm your booking automatically once payment is received.`,
+      `📩 Payment sent. We'll confirm your booking automatically once payment is received.`,
     );
   } catch (error) {
     console.error("Slot selection error:", error);
     await sendMessage(
       phone,
-      "Failed to process your selection. Please try again.",
+      "❌ Failed to process your selection. Please try again.",
     );
   }
 }
@@ -726,7 +721,7 @@ async function handleBookingConfirmation(phone, booking, msg) {
       await Booking.deleteOne({ phone });
       await sendMessage(
         phone,
-        "Booking cancelled. Type 'start' to begin a new booking.",
+        "❌ Booking cancelled. Type 'start' to begin a new booking.",
       );
       return;
     }
@@ -737,7 +732,7 @@ async function handleBookingConfirmation(phone, booking, msg) {
     if (!date || !timeRange) {
       await sendMessage(
         phone,
-        'Session expired. Please type "start" to begin again.',
+        '❌ Session expired. Please type "start" to begin again.',
       );
       return;
     }

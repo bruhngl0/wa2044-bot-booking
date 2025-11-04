@@ -29,7 +29,6 @@ bookingSchema.index(
     partialFilterExpression: { paid: true },
     name: "unique_paid_slot",
   },
-  { unique: true, sparse: true },
 );
 
 const Booking =
