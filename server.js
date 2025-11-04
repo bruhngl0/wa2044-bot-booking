@@ -18,6 +18,12 @@ const {
   PORT = 5000,
 } = process.env;
 
+const cluster = DB_CLUSTER ? DB_CLUSTER.trim() : null;
+const user = DB_USER ? DB_USER.trim() : null;
+const pass = DB_PASS ? DB_PASS.trim() : null;
+const name = DB_NAME ? DB_NAME.trim() : null;
+let mongoConnectUri = MONGO_URI ? MONGO_URI.trim() : null; // Also trim MONGO_URI if it's set
+
 /**
  * IMPORTANT: Register JSON/body parsers BEFORE mounting the webhook route
  * so req.rawBody is captured correctly for signature verification.
@@ -56,11 +62,11 @@ if (razorpayWebhookRoutes) {
 app.use(express.static("public"));
 
 // Build/Connect MongoDB only if env variables present
-let mongoConnectUri = MONGO_URI || null;
 if (!mongoConnectUri) {
-  if (DB_USER && DB_PASS && DB_CLUSTER && DB_NAME) {
-    const encPass = encodeURIComponent(DB_PASS);
-    mongoConnectUri = `mongodb+srv://${DB_USER}:${encPass}@${DB_CLUSTER}/${DB_NAME}?retryWrites=true&w=majority`;
+  if (user && pass && cluster && name) {
+    const encPass = encodeURIComponent(pass);
+    // Use the trimmed variables here
+    mongoConnectUri = `mongodb+srv://${user}:${encPass}@${cluster}/${name}?retryWrites=true&w=majority`;
     console.log("Built MONGO_URI from DB_* env vars");
   } else {
     console.warn(
