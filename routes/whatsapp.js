@@ -520,7 +520,7 @@ router.post("/", async (req, res) => {
     }
 
     // Handle booking confirmation
-    if (msg.startsWith("Confirm_")) {
+    if (msg.startsWith("confirm_")) {
       await handleBookingConfirmation(from, booking, msg);
       return res.sendStatus(200);
     }
