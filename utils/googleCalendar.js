@@ -1,4 +1,3 @@
-// utils/googleCalendar.js
 import { google } from "googleapis";
 import dotenv from "dotenv";
 dotenv.config();
@@ -22,25 +21,23 @@ try {
   // ignore
 }
 
-const {
-  GOOGLE_CLIENT_ID: GOOGLE_CLIENT_ID_RAW,
-  GOOGLE_CLIENT_SECRET: GOOGLE_CLIENT_SECRET_RAW,
-  GOOGLE_REFRESH_TOKEN: GOOGLE_REFRESH_TOKEN_RAW,
-  GOOGLE_CALENDAR_ID = "primary",
-  GOOGLE_DEFAULT_TIMEZONE = "Asia/Kolkata",
-} = process.env;
+// --- Load all environment variables as raw strings ---
+const GOOGLE_CLIENT_ID_RAW = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET_RAW = process.env.GOOGLE_CLIENT_SECRET;
+const GOOGLE_REFRESH_TOKEN_RAW = process.env.GOOGLE_REFRESH_TOKEN;
+const GOOGLE_CALENDAR_ID_RAW = process.env.GOOGLE_CALENDAR_ID;
+const GOOGLE_DEFAULT_TIMEZONE_RAW = process.env.GOOGLE_DEFAULT_TIMEZONE;
 
-// --- FIX: Trim all three critical credentials ---
-const GOOGLE_CLIENT_ID = GOOGLE_CLIENT_ID_RAW
-  ? String(GOOGLE_CLIENT_ID_RAW).trim()
-  : undefined;
-const GOOGLE_CLIENT_SECRET = GOOGLE_CLIENT_SECRET_RAW
-  ? String(GOOGLE_CLIENT_SECRET_RAW).trim()
-  : undefined;
-const GOOGLE_REFRESH_TOKEN = GOOGLE_REFRESH_TOKEN_RAW
-  ? String(GOOGLE_REFRESH_TOKEN_RAW).trim()
-  : undefined;
-// ----------------------------------------------
+// --- FIX: Trim all environment variables, applying safe defaults after trimming ---
+const GOOGLE_CLIENT_ID = GOOGLE_CLIENT_ID_RAW?.trim();
+const GOOGLE_CLIENT_SECRET = GOOGLE_CLIENT_SECRET_RAW?.trim();
+const GOOGLE_REFRESH_TOKEN = GOOGLE_REFRESH_TOKEN_RAW?.trim();
+
+// Critical Fix: Trim GOOGLE_DEFAULT_TIMEZONE to prevent "Invalid time value" errors
+const GOOGLE_CALENDAR_ID = GOOGLE_CALENDAR_ID_RAW?.trim() || "primary";
+const GOOGLE_DEFAULT_TIMEZONE =
+  GOOGLE_DEFAULT_TIMEZONE_RAW?.trim() || "Asia/Kolkata";
+// ----------------------------------------------------------------------------------
 
 let calendar = null;
 let oAuth2Client = null;
@@ -64,8 +61,6 @@ export const ensureAuth = async () => {
 };
 
 // Helper to build an ISO string from date + time in a timezone-aware way.
-// If zonedTimeToUtc is available use it, otherwise fall back to a safe UTC construction.
-// NOTE: fallback assumes the provided time is local to the timezone parameter or server UTC.
 const makeISO = (dateISO, timeHHMM, timezone) => {
   // timeHHMM = "08:00"
   if (zonedTimeToUtc) {
@@ -107,6 +102,7 @@ export const getAvailableSlotsForDate = async (dateISO, options = {}) => {
     return [];
   }
 
+  // The timezone variable here now correctly uses the trimmed and defaulted environment variable
   const timezone = options.timezone || GOOGLE_DEFAULT_TIMEZONE;
   const templateSlots = options.templateSlots || [
     { start: "06:00", end: "07:00" },
@@ -181,6 +177,7 @@ export const getAvailableSlotsForDate = async (dateISO, options = {}) => {
           console.warn("Malformed slot time label (template):", label);
           return null;
         }
+        // These calls to makeISO were failing due to the untrimmed timezone variable
         const sISO = makeISO(dateISO, t.start, timezone);
         const eISO = makeISO(dateISO, t.end, timezone);
         const isSlotFree =
