@@ -1,0 +1,6 @@
+# Hide environment secrets
+.env
+.env.local
+.env
+node_modules
+cs
