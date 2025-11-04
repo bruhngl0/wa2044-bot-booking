@@ -1,5 +1,4 @@
-// FILE: routes/razorpayWebhook.js
-import express from "express";
+// FILE: routes/razorpayWebhook.js import express from "express";
 import crypto from "crypto";
 import axios from "axios";
 import { sendMessage } from "../utils/whatsapp.js";
@@ -10,7 +9,10 @@ import { normalizeSlotString } from "../utils/normalizeSlot.js";
 const router = express.Router();
 
 // Razorpay webhook secret from .env
-const RAZORPAY_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || "replace_with_your_secret";
+// FIX: Ensure the secret is trimmed to prevent whitespace errors.
+const RAZORPAY_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET
+  ? String(process.env.RAZORPAY_WEBHOOK_SECRET).trim()
+  : "replace_with_your_secret";
 
 // ✅ Health check route
 router.get("/webhook", (req, res) => {
@@ -20,11 +22,15 @@ router.get("/webhook", (req, res) => {
 function computeSignatures(rawBody, secret) {
   if (!rawBody) return { hex: null, base64: null };
   const hex = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
-  const base64 = crypto.createHmac("sha256", secret).update(rawBody).digest("base64");
+  const base64 = crypto
+    .createHmac("sha256", secret)
+    .update(rawBody)
+    .digest("base64");
   return { hex, base64 };
 }
 
 function safeCompare(a, b) {
+  // Defensive check for crypto.timingSafeEqual on mismatched length
   try {
     const ab = Buffer.from(a || "", "utf8");
     const bb = Buffer.from(b || "", "utf8");
@@ -38,10 +44,15 @@ function safeCompare(a, b) {
 // ✅ Razorpay webhook handler
 router.post("/webhook", async (req, res) => {
   try {
+    // NOTE: This assumes that a middleware (like body-parser, or custom logic)
+    // has correctly exposed the raw request body as req.rawBody,
+    // which is REQUIRED for Razorpay signature verification.
     const signature = (req.headers["x-razorpay-signature"] || "").trim();
     const { hex, base64 } = computeSignatures(req.rawBody, RAZORPAY_SECRET);
 
-    const verified = safeCompare(signature, hex) || safeCompare(signature, base64);
+    // Razorpay can send the signature as hex or base64, so we check both (though hex is standard for hmac-sha256 digest)
+    const verified =
+      safeCompare(signature, hex) || safeCompare(signature, base64);
     if (!verified) {
       console.warn("❌ Invalid Razorpay signature", { signature, hex, base64 });
       return res.status(400).send("Invalid signature");
@@ -53,7 +64,11 @@ router.post("/webhook", async (req, res) => {
     const event = req.body.event;
     const payload = req.body.payload || {};
 
-    const successEvents = ["payment.captured", "order.paid", "payment_link.paid"];
+    const successEvents = [
+      "payment.captured",
+      "order.paid",
+      "payment_link.paid",
+    ];
     if (successEvents.includes(event)) {
       // Try to identify the booking related to the payment
       let booking = null;
@@ -62,21 +77,27 @@ router.post("/webhook", async (req, res) => {
       if (payload.payment_link?.entity?.reference_id) {
         bookingId = payload.payment_link.entity.reference_id;
         booking = await Booking.findById(bookingId);
-        foundBy = 'payment_link.reference_id';
+        foundBy = "payment_link.reference_id";
       } else if (payload.payment?.entity?.notes?.bookingId) {
         bookingId = payload.payment.entity.notes.bookingId;
         booking = await Booking.findById(bookingId);
-        foundBy = 'payment.entity.notes.bookingId';
+        foundBy = "payment.entity.notes.bookingId";
       } else if (payload.payment?.entity?.order_id) {
-        booking = await Booking.findOne({ "meta.razorpay.orderId": payload.payment.entity.order_id });
-        foundBy = 'meta.razorpay.orderId';
+        booking = await Booking.findOne({
+          "meta.razorpay.orderId": payload.payment.entity.order_id,
+        });
+        foundBy = "meta.razorpay.orderId";
       }
       if (!booking) {
-        console.warn(`No booking found to mark as paid for payment event. Lookup method: ${foundBy}`);
+        console.warn(
+          `No booking found to mark as paid for payment event. Lookup method: ${foundBy}`,
+        );
         return res.status(200).send({ ok: false, msg: "Booking not found" });
       }
       if (booking.paid) {
-        console.log(`Booking already marked as paid (id: ${booking._id}). No action taken.`);
+        console.log(
+          `Booking already marked as paid (id: ${booking._id}). No action taken.`,
+        );
         return res.status(200).send({ ok: true, alreadyPaid: true });
       }
       // Check for booking conflicts before allowing confirmation
@@ -91,11 +112,19 @@ router.post("/webhook", async (req, res) => {
         booking.step = "conflict";
         await booking.save();
         try {
-          await sendMessage(booking.phone, `⚠️ Sorry, this slot was just booked by someone else and is no longer available. Please choose another.`);
+          await sendMessage(
+            booking.phone,
+            `⚠️ Sorry, this slot was just booked by someone else and is no longer available. Please choose another.`,
+          );
         } catch (err) {
-          console.error("⚠️ Failed to send WhatsApp conflict warning:", err.message || err);
+          console.error(
+            "⚠️ Failed to send WhatsApp conflict warning:",
+            err.message || err,
+          );
         }
-        console.warn(`Booking conflict: cannot confirm ${booking._id} because of existing paid booking for slot (${booking.centre}, ${booking.date}, ${booking.time_slot})`);
+        console.warn(
+          `Booking conflict: cannot confirm ${booking._id} because of existing paid booking for slot (${booking.centre}, ${booking.date}, ${booking.time_slot})`,
+        );
         return res.status(200).send({ ok: false, conflict: true });
       }
       // Mark booking as paid & completed and message only once
@@ -108,7 +137,10 @@ router.post("/webhook", async (req, res) => {
         await sendMessage(phone, text);
         console.log("📩 Booking confirmation sent successfully");
       } catch (err) {
-        console.error("⚠️ Failed to send WhatsApp confirmation:", err.message || err);
+        console.error(
+          "⚠️ Failed to send WhatsApp confirmation:",
+          err.message || err,
+        );
       }
       return res.status(200).send({ ok: true });
     }
