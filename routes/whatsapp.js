@@ -516,13 +516,11 @@ router.post("/", async (req, res) => {
         await handleSlotSelection(from, booking, booking.meta.selectedTimeSlot);
       }
 
-      await sendMessage(from, "Confirm booking?");
-
       return res.sendStatus(200);
     }
 
     // Handle booking confirmation
-    if (msg.startsWith("confirm_")) {
+    if (msg.startsWith("Confirm_")) {
       await handleBookingConfirmation(from, booking, msg);
       return res.sendStatus(200);
     }
