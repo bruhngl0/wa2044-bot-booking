@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-
 const bookingSchema = new mongoose.Schema(
   {
     phone: { type: String, required: true, index: true },
@@ -19,9 +18,11 @@ const bookingSchema = new mongoose.Schema(
   { timestamps: true, collection: "bookings" },
 );
 
-// ensure index on phone (non-unique)
+// Index on phone (non-unique) - for quick user lookup
 bookingSchema.index({ phone: 1 });
 
+// Partial unique index: Only enforce uniqueness for PAID bookings
+// This allows multiple incomplete bookings but prevents double-booking of paid slots
 bookingSchema.index(
   { centre: 1, sport: 1, date: 1, time_slot: 1 },
   {
@@ -33,4 +34,5 @@ bookingSchema.index(
 
 const Booking =
   mongoose.models.Booking || mongoose.model("Booking", bookingSchema);
+
 export default Booking;

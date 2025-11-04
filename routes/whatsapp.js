@@ -1,6 +1,4 @@
-// routes/whatsApp.js
-
-import express from "express";
+// routes/whatsApp.js import express from "express";
 import Booking from "../models/Booking.js";
 import {
   sendMessage,
@@ -242,8 +240,17 @@ router.post("/", async (req, res) => {
 
       console.log("✅ Saved selected date:", selectedDate);
 
-      // Format date for display
+      // Format date for display (Defensive check for date object creation)
       const date = new Date(selectedDate);
+      if (isNaN(date.getTime())) {
+        console.error("Invalid date value in selectedDate:", selectedDate);
+        await sendMessage(
+          from,
+          '❌ Internal date error. Please type "start" to try again.',
+        );
+        return res.sendStatus(200);
+      }
+
       const options = {
         weekday: "long",
         year: "numeric",
@@ -299,7 +306,6 @@ router.post("/", async (req, res) => {
 
       // Define time ranges for each period
       let startHour, endHour;
-      // We split the full day (6:00 - 22:00) into two equal periods of 8 slots each:
       // Morning: 06:00 - 14:00 (8 one-hour slots)
       // Evening: 14:00 - 22:00 (8 one-hour slots)
       if (period === "morning") {
@@ -312,30 +318,36 @@ router.post("/", async (req, res) => {
       }
 
       // Get available slots from Google Calendar
-      let availableSlots = [];
+      // NOTE: This returns an array of strings: ["HH:MM - HH:MM", ...]
+      let availableSlotStrings = [];
       try {
-        availableSlots = await getAvailableSlotsForDate(selectedDate);
+        availableSlotStrings = await getAvailableSlotsForDate(selectedDate);
       } catch (error) {
         console.warn("⚠️ Calendar API unavailable, generating fallback slots");
         // Generate fallback slots if API fails
         for (let hour = startHour; hour < endHour; hour++) {
           const startTimeStr = hour.toString().padStart(2, "0") + ":00";
           const endTimeStr = (hour + 1).toString().padStart(2, "0") + ":00";
-          availableSlots.push({
-            start: new Date(),
-            end: new Date(),
-            formatted: `${startTimeStr} - ${endTimeStr}`,
-          });
+          availableSlotStrings.push(`${startTimeStr} - ${endTimeStr}`);
         }
       }
 
-      // Filter slots for the selected period
-      const periodSlots = availableSlots.filter((slot) => {
-        const slotHour = slot.start
-          ? slot.start.getHours()
-          : parseInt(slot.formatted.split(":")[0]);
-        return slotHour >= startHour && slotHour < endHour;
-      });
+      // FIX: Filter slots based on the hour from the string format
+      const periodSlots = availableSlotStrings
+        .filter((slotString) => {
+          if (!slotString || typeof slotString !== "string") return false; // Defensive check
+
+          const [start] = slotString.split(" - ");
+          if (!start) return false;
+
+          const slotHour = parseInt(start.split(":")[0], 10);
+          return slotHour >= startHour && slotHour < endHour;
+        })
+        .map((slotString) => ({
+          // FIX: Convert the string back into the expected object format for the list
+          formatted: slotString,
+          // Note: We don't need 'start' and 'end' Date objects anymore for list generation
+        }));
 
       if (periodSlots.length === 0) {
         await sendMessage(
@@ -516,15 +528,11 @@ const sendSportSelection = async (to) => {
       id: "sport_pickleball",
       title: "🏓 Pickleball",
     },
-    {
-      id: "sport_paddle",
-      title: "🎾 Paddle",
-    },
   ];
 
   await sendButtonsMessage(
     to,
-    "🏃 Welcome! Which sport would you like to play?",
+    "🏃 Welcome to Twenty44. Which sport would you like to play?",
     sportButtons,
   );
 };
@@ -535,14 +543,6 @@ const sendLocationSelection = async (to) => {
     {
       id: "location_jw",
       title: "🏨 JW Marriott",
-    },
-    {
-      id: "location_taj",
-      title: "🏨 Taj West End",
-    },
-    {
-      id: "location_itc",
-      title: "🏨 ITC Gardenia",
     },
   ];
 
@@ -576,8 +576,6 @@ async function handleSlotSelection(phone, booking, msg) {
     // Prepare location and sport details for conflict check and DB persistence
     const locationMap = {
       jw: "JW Marriott",
-      taj: "Taj West End",
-      itc: "ITC Gardenia",
     };
     const sportName =
       booking.meta.selectedSport === "pickleball" ? "Pickleball" : "Paddle";
