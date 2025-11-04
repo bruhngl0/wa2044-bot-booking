@@ -1,4 +1,3 @@
-// models/Booking.js
 import mongoose from "mongoose";
 
 const bookingSchema = new mongoose.Schema(
@@ -17,13 +16,24 @@ const bookingSchema = new mongoose.Schema(
     totalAmount: Number,
     meta: mongoose.Schema.Types.Mixed,
   },
-  { timestamps: true, collection: "bookings" }
+  { timestamps: true, collection: "bookings" },
 );
 
-// ensure index on phone (non-unique)
+// Index on phone (non-unique) - for quick user lookup
 bookingSchema.index({ phone: 1 });
-// NEW: Ensure a slot can only ever have at most one booking, globally per slot+centre+date+sport
-bookingSchema.index({ centre: 1, sport: 1, date: 1, time_slot: 1 }, { unique: true });
 
-const Booking = mongoose.models.Booking || mongoose.model("Booking", bookingSchema);
+// Partial unique index: Only enforce uniqueness for PAID bookings
+// This allows multiple incomplete bookings but prevents double-booking of paid slots
+bookingSchema.index(
+  { centre: 1, sport: 1, date: 1, time_slot: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { paid: true },
+    name: "unique_paid_slot",
+  },
+);
+
+const Booking =
+  mongoose.models.Booking || mongoose.model("Booking", bookingSchema);
+
 export default Booking;
