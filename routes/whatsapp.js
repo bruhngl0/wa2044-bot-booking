@@ -516,6 +516,8 @@ router.post("/", async (req, res) => {
         await handleSlotSelection(from, booking, booking.meta.selectedTimeSlot);
       }
 
+      await sendMessage(from, "Confirm booking?");
+
       return res.sendStatus(200);
     }
 
