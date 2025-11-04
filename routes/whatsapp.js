@@ -529,15 +529,11 @@ const sendSportSelection = async (to) => {
       id: "sport_pickleball",
       title: "🏓 Pickleball",
     },
-    {
-      id: "sport_paddle",
-      title: "🎾 Paddle",
-    },
   ];
 
   await sendButtonsMessage(
     to,
-    "🏃 Welcome! Which sport would you like to play?",
+    "🏃 Welcome to Twenty44. Which sport would you like to play?",
     sportButtons,
   );
 };
@@ -548,14 +544,6 @@ const sendLocationSelection = async (to) => {
     {
       id: "location_jw",
       title: "🏨 JW Marriott",
-    },
-    {
-      id: "location_taj",
-      title: "🏨 Taj West End",
-    },
-    {
-      id: "location_itc",
-      title: "🏨 ITC Gardenia",
     },
   ];
 
@@ -589,8 +577,6 @@ async function handleSlotSelection(phone, booking, msg) {
     // Prepare location and sport details for conflict check and DB persistence
     const locationMap = {
       jw: "JW Marriott",
-      taj: "Taj West End",
-      itc: "ITC Gardenia",
     };
     const sportName =
       booking.meta.selectedSport === "pickleball" ? "Pickleball" : "Paddle";
