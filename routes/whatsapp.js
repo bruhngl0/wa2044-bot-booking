@@ -434,7 +434,7 @@ router.post("/", async (req, res) => {
     }
 
     // Handle name collection
-    if (booking.step === "collecting_name") {
+    if (booking.step === "collecting_name" && !msg.startsWith("confirm_")) {
       // Validate name
       if (!msg || msg.length < 3) {
         await sendMessage(
@@ -470,9 +470,9 @@ router.post("/", async (req, res) => {
               description: "₹800",
             },
             {
-              id: "none",
-              title: "none",
-              description: "none",
+              id: "addon_none",
+              title: "No thanks, proceed to payment",
+              description: "Skip additional services",
             },
           ],
         },
@@ -487,7 +487,7 @@ router.post("/", async (req, res) => {
     }
 
     // Handle addon selection
-    if (booking.step === "selecting_addons") {
+    if (booking.step === "selecting_addons" && msg.startsWith("addon_")) {
       const addon = msg.replace("addon_", "");
       if (addon === "none") {
         await handleSlotSelection(from, booking, booking.meta.selectedTimeSlot);
@@ -515,7 +515,7 @@ router.post("/", async (req, res) => {
         // Proceed to payment
         await handleSlotSelection(from, booking, booking.meta.selectedTimeSlot);
       }
-
+      await handleSlotSelection(from, booking, msg);
       return res.sendStatus(200);
     }
 
