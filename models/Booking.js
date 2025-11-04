@@ -1,3 +1,4 @@
+// models/Booking.js
 import mongoose from "mongoose";
 
 const bookingSchema = new mongoose.Schema(
@@ -8,14 +9,9 @@ const bookingSchema = new mongoose.Schema(
     centre: String,
     date: String, // YYYY-MM-DD
     time_slot: String, // e.g. "11:00 - 12:00"
-    name: { type: String, required: true },
-    additionalServices: [
-      {
-        name: String,
-        price: Number,
-      },
-    ],
     players: Number,
+    addons: [String],
+    name: String,
     paid: { type: Boolean, default: false },
     calendarEventId: String,
     totalAmount: Number,
@@ -24,21 +20,14 @@ const bookingSchema = new mongoose.Schema(
   { timestamps: true, collection: "bookings" },
 );
 
-// Index on phone (non-unique) - for quick user lookup
+// ensure index on phone (non-unique)
 bookingSchema.index({ phone: 1 });
-
-// Partial unique index: Only enforce uniqueness for PAID bookings
-// This allows multiple incomplete bookings but prevents double-booking of paid slots
+// NEW: Ensure a slot can only ever have at most one booking, globally per slot+centre+date+sport
 bookingSchema.index(
   { centre: 1, sport: 1, date: 1, time_slot: 1 },
-  {
-    unique: true,
-    partialFilterExpression: { paid: true },
-    name: "unique_paid_slot",
-  },
+  { unique: true },
 );
 
 const Booking =
   mongoose.models.Booking || mongoose.model("Booking", bookingSchema);
-
 export default Booking;

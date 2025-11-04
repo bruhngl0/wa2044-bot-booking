@@ -411,112 +411,7 @@ router.post("/", async (req, res) => {
 
     // Handle slot selection
     if (msg.startsWith("sl") && /^sl\d+$/.test(msg)) {
-      const timeRange = booking.meta?.slotMapping?.[msg];
-      const date = booking.meta?.selectedDate;
-
-      if (!timeRange || !date) {
-        await sendMessage(
-          from,
-          'Session expired. Please type "start" to begin again.',
-        );
-        return res.sendStatus(200);
-      }
-
-      // Store slot selection and move to name collection step
-      booking.meta.selectedTimeSlot = timeRange;
-      booking.meta.confirmDate = date;
-      booking.meta.confirmTime = timeRange;
-      booking.step = "collecting_name";
-      booking.markModified("meta");
-      await booking.save();
-
-      await sendMessage(from, "Please enter your full name:");
-      return res.sendStatus(200);
-    }
-
-    // Handle name collection
-    if (booking.step === "collecting_name" && !msg.startsWith("confirm_")) {
-      // Validate name
-      if (!msg || msg.length < 3) {
-        await sendMessage(
-          from,
-          "Please enter a valid name (at least 3 characters):",
-        );
-        return res.sendStatus(200);
-      }
-
-      // Store name and move to addon selection
-      booking.name = msg;
-      booking.step = "selecting_addons";
-      await booking.save();
-
-      // Show addon options
-      const addonsList = [
-        {
-          title: "Additional Services",
-          rows: [
-            {
-              id: "addon_spa",
-              title: "Spa",
-              description: "₹2000",
-            },
-            {
-              id: "addon_gym",
-              title: "Gym Access",
-              description: "₹500",
-            },
-            {
-              id: "addon_sauna",
-              title: "Sauna",
-              description: "₹800",
-            },
-            {
-              id: "addon_none",
-              title: "No thanks, proceed to payment",
-              description: "Skip additional services",
-            },
-          ],
-        },
-      ];
-
-      await sendListMessage(
-        from,
-        "Would you like to add any additional services?",
-        addonsList,
-      );
-      return res.sendStatus(200);
-    }
-
-    // Handle addon selection
-    if (booking.step === "selecting_addons" && msg.startsWith("addon_")) {
-      const addon = msg.replace("addon_", "");
-      if (addon === "none") {
-        await handleSlotSelection(from, booking, booking.meta.selectedTimeSlot);
-      } else {
-        // Map of addon prices
-        const addonPrices = {
-          spa: { name: "Spa", price: 2000 },
-          gym: { name: "Gym Access", price: 500 },
-          sauna: { name: "Sauna", price: 800 },
-        };
-
-        const selectedAddon = addonPrices[addon];
-        if (!selectedAddon) {
-          await sendMessage(from, "Invalid selection. Please try again.");
-          return res.sendStatus(200);
-        }
-
-        // Add addon to booking
-        if (!booking.additionalServices) {
-          booking.additionalServices = [];
-        }
-        booking.additionalServices.push(selectedAddon);
-        await booking.save();
-
-        // Proceed to payment
-        await handleSlotSelection(from, booking, booking.meta.selectedTimeSlot);
-      }
-
+      await handleSlotSelection(from, booking, msg);
       return res.sendStatus(200);
     }
 
@@ -710,24 +605,14 @@ async function handleSlotSelection(phone, booking, msg) {
     //i want to add addons here------------------
 
     // Prepare update payload for persistent booking record
-    //
-    // Calculate total amount including base price and addons
-    const baseAmount =
+    const amount =
       booking.meta?.price || Number(process.env.DEFAULT_BOOKING_AMOUNT) || 1;
-    const addonAmount = (booking.additionalServices || []).reduce(
-      (sum, addon) => sum + addon.price,
-      0,
-    );
-    const totalAmount = baseAmount + addonAmount;
-
     const updatePayload = {
       sport: sportName,
       centre,
       date,
       time_slot: timeRange,
-      name: booking.name,
-      additionalServices: booking.additionalServices || [],
-      totalAmount: Number(totalAmount),
+      totalAmount: Number(amount),
       meta: booking.meta,
       step: booking.step || "payment_pending",
     };
@@ -783,17 +668,7 @@ async function handleSlotSelection(phone, booking, msg) {
       month: "long",
       day: "numeric",
     });
-
-    // Format addons summary
-    const addonsSummary =
-      booking.additionalServices?.length > 0
-        ? "\nAdditional Services:\n" +
-          booking.additionalServices
-            .map((addon) => `- ${addon.name}: ₹${addon.price}`)
-            .join("\n")
-        : "";
-
-    const summary = `Booking Summary\n\nName: ${booking.name}\nSport: ${sportName}\nLocation: ${centre}\nDate: ${formattedDate}\nTime: ${timeRange}${addonsSummary}\nTotal Amount: ₹${booking.totalAmount}`;
+    const summary = `📋 Booking Summary\n\nSport: ${sportName}\nLocation: ${centre}\nDate: ${formattedDate}\nTime: ${timeRange}\nAmount: ₹${booking.totalAmount}`;
     await sendMessage(phone, summary);
 
     // Create a Razorpay payment link and send to the user as a tappable URL button
@@ -817,7 +692,7 @@ async function handleSlotSelection(phone, booking, msg) {
           );
           await sendMessage(
             phone,
-            `${body}\n${paymentUrl}\nAfter payment, tap "Confirm".`,
+            `${body}\n${paymentUrl}\nAfter payment, tap "✅ Confirm".`,
           );
         }
       }
@@ -935,7 +810,7 @@ async function handleBookingConfirmation(phone, booking, msg) {
     });
 
     const calendarNote = calendarCreated
-      ? "\n Calendar event created!"
+      ? "\n📆 Calendar event created!"
       : "\n⚠️ Note: Calendar sync unavailable";
 
     await sendMessage(
@@ -947,7 +822,7 @@ async function handleBookingConfirmation(phone, booking, msg) {
     await Booking.deleteOne({ phone });
   } catch (error) {
     console.error("Booking confirmation error:", error);
-    await sendMessage(phone, "Failed to confirm booking. Please try again.");
+    await sendMessage(phone, "❌ Failed to confirm booking. Please try again.");
   }
 }
 
