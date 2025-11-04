@@ -16,35 +16,45 @@ try {
       return null;
     }
   })();
-  if (tz && typeof tz.zonedTimeToUtc === "function") zonedTimeToUtc = tz.zonedTimeToUtc;
+  if (tz && typeof tz.zonedTimeToUtc === "function")
+    zonedTimeToUtc = tz.zonedTimeToUtc;
 } catch (e) {
   // ignore
 }
 
 const {
   GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET,
+  GOOGLE_CLIENT_SECRET: GOOGLE_CLIENT_SECRET_RAW, // Rename the raw variable
   GOOGLE_REFRESH_TOKEN,
   GOOGLE_CALENDAR_ID = "primary",
   GOOGLE_DEFAULT_TIMEZONE = "Asia/Kolkata",
 } = process.env;
 
+// Trim the secret key to remove any trailing newlines or whitespace
+const GOOGLE_CLIENT_SECRET = GOOGLE_CLIENT_SECRET_RAW
+  ? String(GOOGLE_CLIENT_SECRET_RAW).trim()
+  : undefined;
+
 let calendar = null;
 let oAuth2Client = null;
 
 export const ensureAuth = async () => {
+  // Use the trimmed variable
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REFRESH_TOKEN) {
     console.warn("⚠️ Missing Google Calendar credentials in .env");
     return false;
   }
   if (!oAuth2Client) {
-    oAuth2Client = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET);
+    // Use the trimmed variable
+    oAuth2Client = new google.auth.OAuth2(
+      GOOGLE_CLIENT_ID,
+      GOOGLE_CLIENT_SECRET,
+    );
     oAuth2Client.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN });
     calendar = google.calendar({ version: "v3", auth: oAuth2Client });
   }
   return true;
 };
-
 // Helper to build an ISO string from date + time in a timezone-aware way.
 // If zonedTimeToUtc is available use it, otherwise fall back to a safe UTC construction.
 // NOTE: fallback assumes the provided time is local to the timezone parameter or server UTC.
@@ -84,26 +94,24 @@ export const getBusyForRange = async (timeMinISO, timeMaxISO) => {
 
 export const getAvailableSlotsForDate = async (dateISO, options = {}) => {
   const timezone = options.timezone || GOOGLE_DEFAULT_TIMEZONE;
-  const templateSlots =
-    options.templateSlots ||
-    [
-      { start: "06:00", end: "07:00" },
-      { start: "07:00", end: "08:00" },
-      { start: "08:00", end: "09:00" },
-      { start: "09:00", end: "10:00" },
-      { start: "10:00", end: "11:00" },
-      { start: "11:00", end: "12:00" },
-      { start: "12:00", end: "13:00" },
-      { start: "13:00", end: "14:00" },
-      { start: "14:00", end: "15:00" },
-      { start: "15:00", end: "16:00" },
-      { start: "16:00", end: "17:00" },
-      { start: "17:00", end: "18:00" },
-      { start: "18:00", end: "19:00" },
-      { start: "19:00", end: "20:00" },
-      { start: "20:00", end: "21:00" },
-      { start: "21:00", end: "22:00" },
-    ];
+  const templateSlots = options.templateSlots || [
+    { start: "06:00", end: "07:00" },
+    { start: "07:00", end: "08:00" },
+    { start: "08:00", end: "09:00" },
+    { start: "09:00", end: "10:00" },
+    { start: "10:00", end: "11:00" },
+    { start: "11:00", end: "12:00" },
+    { start: "12:00", end: "13:00" },
+    { start: "13:00", end: "14:00" },
+    { start: "14:00", end: "15:00" },
+    { start: "15:00", end: "16:00" },
+    { start: "16:00", end: "17:00" },
+    { start: "17:00", end: "18:00" },
+    { start: "18:00", end: "19:00" },
+    { start: "19:00", end: "20:00" },
+    { start: "20:00", end: "21:00" },
+    { start: "21:00", end: "22:00" },
+  ];
 
   try {
     // 1. Fetch relevant context for filtering
@@ -111,21 +119,31 @@ export const getAvailableSlotsForDate = async (dateISO, options = {}) => {
     const sport = options.sport || null;
     // Import Booking dynamically here to avoid circular dependency
     let Booking = null;
-    try { Booking = (await import("../models/Booking.js")).default; } catch { Booking = null; }
+    try {
+      Booking = (await import("../models/Booking.js")).default;
+    } catch {
+      Booking = null;
+    }
 
     // 2. Mongo: get all paid bookings for this centre/date (optionally, sport)
     let bookedSlots = [];
     if (Booking && centre) {
       // Hard Normalization
       function normalizeSlotString(s) {
-        return String(s || "").replace(/[\u2013\u2014]/g, "-").replace(/-/g, " - ")
-          .replace(/\s+-\s+/g, " - ").replace(/\s+/g, " ").trim();
+        return String(s || "")
+          .replace(/[\u2013\u2014]/g, "-")
+          .replace(/-/g, " - ")
+          .replace(/\s+-\s+/g, " - ")
+          .replace(/\s+/g, " ")
+          .trim();
       }
       // Query to block **any** booking for given slot
       const query = { date: dateISO, centre };
       if (sport) query.sport = sport;
       const bookings = await Booking.find(query).select("time_slot");
-      bookedSlots = bookings.map(b => normalizeSlotString(b.time_slot)).filter(Boolean);
+      bookedSlots = bookings
+        .map((b) => normalizeSlotString(b.time_slot))
+        .filter(Boolean);
     }
 
     const dayStartUTC = makeISO(dateISO, "00:00", timezone);
@@ -133,7 +151,13 @@ export const getAvailableSlotsForDate = async (dateISO, options = {}) => {
     const busy = await getBusyForRange(dayStartUTC, dayEndUTC);
 
     const overlaps = (sISO, eISO) =>
-      busy.some((b) => !(new Date(eISO) <= new Date(b.start) || new Date(sISO) >= new Date(b.end)));
+      busy.some(
+        (b) =>
+          !(
+            new Date(eISO) <= new Date(b.start) ||
+            new Date(sISO) >= new Date(b.end)
+          ),
+      );
 
     const available = templateSlots
       .map((t) => {
@@ -144,7 +168,8 @@ export const getAvailableSlotsForDate = async (dateISO, options = {}) => {
         }
         const sISO = makeISO(dateISO, t.start, timezone);
         const eISO = makeISO(dateISO, t.end, timezone);
-        const isSlotFree = !overlaps(sISO, eISO) && !bookedSlots.includes(label);
+        const isSlotFree =
+          !overlaps(sISO, eISO) && !bookedSlots.includes(label);
         return isSlotFree ? label : null;
       })
       .filter(Boolean);
@@ -165,15 +190,18 @@ export const getAvailableSlotsForDate = async (dateISO, options = {}) => {
 };
 
 // Get available time slots for a specific date
-export const getAvailableSlots = async (dateISO, timezone = GOOGLE_DEFAULT_TIMEZONE) => {
+export const getAvailableSlots = async (
+  dateISO,
+  timezone = GOOGLE_DEFAULT_TIMEZONE,
+) => {
   if (!(await ensureAuth())) {
-    throw new Error('Google Calendar authentication failed');
+    throw new Error("Google Calendar authentication failed");
   }
 
   try {
     const startOfDay = new Date(dateISO);
     startOfDay.setHours(0, 0, 0, 0);
-    
+
     const endOfDay = new Date(dateISO);
     endOfDay.setHours(23, 59, 59, 999);
 
@@ -195,39 +223,48 @@ export const getAvailableSlots = async (dateISO, timezone = GOOGLE_DEFAULT_TIMEZ
     for (let hour = startHour; hour < endHour; hour++) {
       const slotStart = new Date(startOfDay);
       slotStart.setHours(hour, 0, 0, 0);
-      
+
       const slotEnd = new Date(slotStart);
       slotEnd.setHours(hour + 1, 0, 0, 0);
-      
+
       // Check if this slot is available
-      const isBusy = response.data.calendars[GOOGLE_CALENDAR_ID].busy.some(busy => {
-        const busyStart = new Date(busy.start);
-        const busyEnd = new Date(busy.end);
-        return !(slotStart >= busyEnd || slotEnd <= busyStart);
-      });
+      const isBusy = response.data.calendars[GOOGLE_CALENDAR_ID].busy.some(
+        (busy) => {
+          const busyStart = new Date(busy.start);
+          const busyEnd = new Date(busy.end);
+          return !(slotStart >= busyEnd || slotEnd <= busyStart);
+        },
+      );
 
       if (!isBusy) {
         // Format time with leading zeros
-        const startTimeStr = hour.toString().padStart(2, '0') + ':00';
-        const endTimeStr = (hour + 1).toString().padStart(2, '0') + ':00';
-        
+        const startTimeStr = hour.toString().padStart(2, "0") + ":00";
+        const endTimeStr = (hour + 1).toString().padStart(2, "0") + ":00";
+
         slots.push({
           start: slotStart,
           end: slotEnd,
-          formatted: `${startTimeStr} - ${endTimeStr}`
+          formatted: `${startTimeStr} - ${endTimeStr}`,
         });
       }
     }
 
     return slots;
   } catch (error) {
-    console.error('Error getting available slots:', error);
-    throw new Error('Failed to fetch available time slots');
+    console.error("Error getting available slots:", error);
+    throw new Error("Failed to fetch available time slots");
   }
 };
 
 // Create a new calendar event
-export const createEvent = async ({ dateISO, slot, summary = "Booking", description = "", attendees = [], timezone = GOOGLE_DEFAULT_TIMEZONE }) => {
+export const createEvent = async ({
+  dateISO,
+  slot,
+  summary = "Booking",
+  description = "",
+  attendees = [],
+  timezone = GOOGLE_DEFAULT_TIMEZONE,
+}) => {
   await ensureAuth();
   if (!calendar) throw new Error("Google Calendar not configured");
 
