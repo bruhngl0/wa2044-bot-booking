@@ -36,3 +36,5 @@ const Booking =
   mongoose.models.Booking || mongoose.model("Booking", bookingSchema);
 
 export default Booking;
+
+//free-commit-to-reinitialize-db
