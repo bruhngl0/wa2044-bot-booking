@@ -515,7 +515,7 @@ router.post("/", async (req, res) => {
         // Proceed to payment
         await handleSlotSelection(from, booking, booking.meta.selectedTimeSlot);
       }
-      await handleSlotSelection(from, booking, msg);
+
       return res.sendStatus(200);
     }
 
