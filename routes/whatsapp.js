@@ -469,6 +469,11 @@ router.post("/", async (req, res) => {
               title: "Sauna",
               description: "₹800",
             },
+            {
+              id: "none",
+              title: "none",
+              description: "none",
+            },
           ],
         },
       ];
@@ -482,7 +487,7 @@ router.post("/", async (req, res) => {
     }
 
     // Handle addon selection
-    if (booking.step === "selecting_addons" && msg.startsWith("addon_")) {
+    if (booking.step === "selecting_addons") {
       const addon = msg.replace("addon_", "");
       if (addon === "none") {
         await handleSlotSelection(from, booking, booking.meta.selectedTimeSlot);
