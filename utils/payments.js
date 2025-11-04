@@ -5,10 +5,22 @@ import Booking from "../models/Booking.js";
 
 dotenv.config();
 
-const { RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, BASE_URL } = process.env;
+// --- Trimming Environment Variables ---
+const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID
+  ? String(process.env.RAZORPAY_KEY_ID).trim()
+  : undefined;
+const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET
+  ? String(process.env.RAZORPAY_KEY_SECRET).trim()
+  : undefined;
+const BASE_URL = process.env.BASE_URL
+  ? String(process.env.BASE_URL).trim()
+  : undefined;
+// ------------------------------------
 
 if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
-  console.warn("⚠️ Razorpay keys missing in .env (RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET)");
+  console.warn(
+    "⚠️ Razorpay keys missing in .env (RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET)",
+  );
 }
 
 const razor = new Razorpay({
@@ -22,10 +34,11 @@ const razor = new Razorpay({
  */
 export async function createPaymentLink(booking, amount = 1) {
   try {
-    if (!booking || !booking._id) throw new Error("Booking required to create payment link");
+    if (!booking || !booking._id)
+      throw new Error("Booking required to create payment link");
 
-  // Ensure minimum checkout amount is 1 rupee. Convert rupees -> paise
-  const amountPaise = Math.max(1, Number(amount)) * 100;
+    // Ensure minimum checkout amount is 1 rupee. Convert rupees -> paise
+    const amountPaise = Math.max(1, Number(amount)) * 100;
 
     const opts = {
       amount: amountPaise,
@@ -44,19 +57,26 @@ export async function createPaymentLink(booking, amount = 1) {
       callback_method: "get",
     };
 
-    console.log("Creating Razorpay payment link:", { bookingId: booking._id, amountPaise });
+    console.log("Creating Razorpay payment link:", {
+      bookingId: booking._id,
+      amountPaise,
+    });
     const resp = await razor.paymentLink.create(opts);
 
     // persist meta into booking
     booking.meta = booking.meta || {};
     booking.meta.razorpay = booking.meta.razorpay || {};
-    booking.meta.razorpay.paymentLinkId = resp.id || booking.meta.razorpay.paymentLinkId;
-    booking.meta.razorpay.paymentLinkUrl = resp.short_url || booking.meta.razorpay.paymentLinkUrl;
+    booking.meta.razorpay.paymentLinkId =
+      resp.id || booking.meta.razorpay.paymentLinkId;
+    booking.meta.razorpay.paymentLinkUrl =
+      resp.short_url || booking.meta.razorpay.paymentLinkUrl;
     booking.meta.razorpay.lastCreatedAt = new Date().toISOString();
     booking.step = "payment_pending";
     await booking.save();
 
-    console.log(`✅ Payment link created for booking ${booking._id}: ${resp.short_url}`);
+    console.log(
+      `✅ Payment link created for booking ${booking._id}: ${resp.short_url}`,
+    );
     return resp.short_url;
   } catch (err) {
     console.error("Error creating payment link:", err?.message || err);
