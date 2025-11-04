@@ -23,39 +23,45 @@ try {
 }
 
 const {
-  GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET: GOOGLE_CLIENT_SECRET_RAW, // Rename the raw variable
-  GOOGLE_REFRESH_TOKEN,
+  GOOGLE_CLIENT_ID: GOOGLE_CLIENT_ID_RAW,
+  GOOGLE_CLIENT_SECRET: GOOGLE_CLIENT_SECRET_RAW,
+  GOOGLE_REFRESH_TOKEN: GOOGLE_REFRESH_TOKEN_RAW,
   GOOGLE_CALENDAR_ID = "primary",
   GOOGLE_DEFAULT_TIMEZONE = "Asia/Kolkata",
 } = process.env;
 
-// Trim the secret key to remove any trailing newlines or whitespace
+// --- FIX: Trim all three critical credentials ---
+const GOOGLE_CLIENT_ID = GOOGLE_CLIENT_ID_RAW
+  ? String(GOOGLE_CLIENT_ID_RAW).trim()
+  : undefined;
 const GOOGLE_CLIENT_SECRET = GOOGLE_CLIENT_SECRET_RAW
   ? String(GOOGLE_CLIENT_SECRET_RAW).trim()
   : undefined;
+const GOOGLE_REFRESH_TOKEN = GOOGLE_REFRESH_TOKEN_RAW
+  ? String(GOOGLE_REFRESH_TOKEN_RAW).trim()
+  : undefined;
+// ----------------------------------------------
 
 let calendar = null;
 let oAuth2Client = null;
 
 export const ensureAuth = async () => {
-  // Use the trimmed variable
+  // Now using the trimmed variables
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REFRESH_TOKEN) {
     console.warn("⚠️ Missing Google Calendar credentials in .env");
     return false;
   }
   if (!oAuth2Client) {
-    // Use the trimmed variable
     oAuth2Client = new google.auth.OAuth2(
       GOOGLE_CLIENT_ID,
       GOOGLE_CLIENT_SECRET,
     );
+    // Setting credentials with the trimmed refresh token
     oAuth2Client.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN });
     calendar = google.calendar({ version: "v3", auth: oAuth2Client });
   }
   return true;
-};
-// Helper to build an ISO string from date + time in a timezone-aware way.
+}; // Helper to build an ISO string from date + time in a timezone-aware way.
 // If zonedTimeToUtc is available use it, otherwise fall back to a safe UTC construction.
 // NOTE: fallback assumes the provided time is local to the timezone parameter or server UTC.
 // It is conservative and works for availability checks in practically all simple deployments.
