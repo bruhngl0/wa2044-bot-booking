@@ -434,62 +434,12 @@ router.post("/", async (req, res) => {
     }
 
     // Handle name collection
-    if (booking.step === "collecting_name" && !msg.startsWith("confirm_")) {
-      // Validate name
-      if (!msg || msg.length < 3) {
-        await sendMessage(
-          from,
-          "Please enter a valid name (at least 3 characters):",
-        );
-        return res.sendStatus(200);
-      }
-
-      // Store name and move to addon selection
-      booking.name = msg;
-      booking.step = "selecting_addons";
-      await booking.save();
-
-      // Show addon options
-      const addonsList = [
-        {
-          title: "Additional Services",
-          rows: [
-            {
-              id: "addon_spa",
-              title: "Spa",
-              description: "₹2000",
-            },
-            {
-              id: "addon_gym",
-              title: "Gym Access",
-              description: "₹500",
-            },
-            {
-              id: "addon_sauna",
-              title: "Sauna",
-              description: "₹800",
-            },
-            {
-              id: "addon_none",
-              title: "No thanks, proceed to payment",
-              description: "Skip additional services",
-            },
-          ],
-        },
-      ];
-
-      await sendListMessage(
-        from,
-        "Would you like to add any additional services?",
-        addonsList,
-      );
-      return res.sendStatus(200);
-    }
-
     // Handle addon selection
-    if (booking.step === "selecting_addons" && msg.startsWith("addon_")) {
-      const addon = msg.replace("addon_", "");
+    if (booking.step === "selecting_addons") {
+      const addon = msg.id.replace("addon_", "");
+
       if (addon === "none") {
+        // User declined addons, proceed to payment
         await handleSlotSelection(from, booking, booking.meta.selectedTimeSlot);
       } else {
         // Map of addon prices
@@ -512,13 +462,48 @@ router.post("/", async (req, res) => {
         booking.addons.push(selectedAddon);
         await booking.save();
 
-        // Proceed to payment
-        await handleSlotSelection(from, booking, booking.meta.selectedTimeSlot);
+        // Show addon selection again so user can add more or proceed
+        const addonsList = [
+          {
+            title: "Additional Services",
+            rows: [
+              {
+                id: "addon_spa",
+                title: "Spa",
+                description: "₹2000",
+              },
+              {
+                id: "addon_gym",
+                title: "Gym Access",
+                description: "₹500",
+              },
+              {
+                id: "addon_sauna",
+                title: "Sauna",
+                description: "₹800",
+              },
+              {
+                id: "addon_none",
+                title: "No thanks, proceed to payment",
+                description: "Skip additional services",
+              },
+            ],
+          },
+        ];
+
+        const currentAddons = booking.addons.map((a) => a.name).join(", ");
+        await sendListMessage(
+          from,
+          `Added ${selectedAddon.name}! Current addons: ${currentAddons}\n\nWould you like to add more services?`,
+          addonsList,
+        );
       }
-      await handleSlotSelection(from, booking, msg);
+
+      // REMOVE THIS LINE - it was causing duplicate calls
+      // await handleSlotSelection(from, booking, msg);
+
       return res.sendStatus(200);
     }
-
     // Handle booking confirmation
     if (msg.startsWith("confirm_")) {
       await handleBookingConfirmation(from, booking, msg);
