@@ -434,7 +434,7 @@ router.post("/", async (req, res) => {
     }
 
     // Handle name collection
-    if (booking.step === "collecting_name" && !msg.startsWith("confirm_")) {
+    if (booking.step === "collecting_name") {
       // Validate name
       if (!msg || msg.length < 3) {
         await sendMessage(
@@ -468,11 +468,6 @@ router.post("/", async (req, res) => {
               id: "addon_sauna",
               title: "Sauna",
               description: "₹800",
-            },
-            {
-              id: "addon_none",
-              title: "No thanks, proceed to payment",
-              description: "Skip additional services",
             },
           ],
         },
