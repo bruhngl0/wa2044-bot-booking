@@ -447,28 +447,23 @@ const handleNameCollection = async (from, booking, msg) => {
     console.log(`Name collected: ${booking.name} for booking ${booking._id}`);
 
     // Show addon selection
-    const addonsList = [
-      { id: "addon_spa", title: "Spa", description: "₹2000" },
-      { id: "addon_gym", title: "Gym Access", description: "₹500" },
-      { id: "addon_sauna", title: "Sauna", description: "₹800" },
+
+    await sendListMessage(from, "Select Addons", [
       {
-        id: "addon_none",
-        title: "No thanks, proceed to payment",
-        description: "Continue without add-ons",
+        title: "Select Addons",
+        rows: [
+          // Your original addonsList goes here as the 'rows' property
+          { id: "addon_spa", title: "Spa", description: "₹2000" },
+          { id: "addon_gym", title: "Gym Access", description: "₹500" },
+          { id: "addon_sauna", title: "Sauna", description: "₹800" },
+          {
+            id: "addon_none",
+            title: "None",
+            description: "Continue payment",
+          },
+        ],
       },
-    ];
-
-    const headerText = "Add-Ons Available";
-    const bodyText = "Select:";
-    const buttonText = "View Add-Ons"; // This is the main button text
-
-    await sendListMessageOne(
-      from,
-      headerText,
-      bodyText,
-      buttonText,
-      addonsList,
-    );
+    ]);
   } catch (error) {
     console.error("Error in handleNameCollection:", error);
     await sendMessage(
