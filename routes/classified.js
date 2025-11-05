@@ -448,18 +448,13 @@ const handleNameCollection = async (from, booking, msg) => {
 
     // Show addon selection
     const addonsList = [
+      { id: "addon_spa", title: "Spa", description: "₹2000" },
+      { id: "addon_gym", title: "Gym Access", description: "₹500" },
+      { id: "addon_sauna", title: "Sauna", description: "₹800" },
       {
-        title: "Additional Services",
-        rows: [
-          { id: "addon_spa", title: "Spa", description: "₹2000" },
-          { id: "addon_gym", title: "Gym Access", description: "₹500" },
-          { id: "addon_sauna", title: "Sauna", description: "₹800" },
-          {
-            id: "addon_none",
-            title: "No thanks, proceed to payment",
-            description: "Continue without add-ons",
-          },
-        ],
+        id: "addon_none",
+        title: "No thanks, proceed to payment",
+        description: "Continue without add-ons",
       },
     ];
 
