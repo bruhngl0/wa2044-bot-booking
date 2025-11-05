@@ -86,14 +86,14 @@ export const sendUrlButtonMessage = async (
   return sendApi(payload);
 };
 
-export const sendListMessage = async (to, bodyText, sections) => {
+export const sendListMessage = async (to, sections) => {
   const payload = {
     messaging_product: "whatsapp",
     to,
     type: "interactive",
     interactive: {
       type: "list",
-      body: { text: bodyText },
+
       action: { button: "View Options", sections },
     },
   };

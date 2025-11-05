@@ -266,7 +266,7 @@ const handleLocationSelection = async (from, booking, msg) => {
 
   console.log("Saved date mapping:", booking.meta.dateMapping);
 
-  await sendListMessage(from, "Select a Date", [
+  await sendListMessage(from, "Select Date", [
     { title: "Available Dates", rows: dateRows },
   ]);
 };
@@ -379,7 +379,7 @@ const handleTimePeriodSelection = async (from, booking, msg) => {
 
   console.log("✅ Saved slot mapping:", booking.meta.slotMapping);
 
-  await sendListMessage(from, "🕒 Select a Time Slot", [
+  await sendListMessage(from, "Select Time Slot", [
     {
       title: `${timePeriod.emoji} ${period === "morning" ? "Morning" : "Evening"} Slots`,
       rows: slotRows,
@@ -594,7 +594,7 @@ const handleAddonSelection = async (from, booking, msg) => {
   const currentAddons = booking.addons.map((a) => a.name).join(", ");
   await sendListMessage(
     from,
-    `✅ Added ${selectedAddon.name}!\n\nCurrent add-ons: ${currentAddons}\n\nAdd more or proceed to payment?`,
+    `Added ${selectedAddon.name} ${currentAddons}`,
     addonsList,
   );
 };
