@@ -593,11 +593,23 @@ const handleAddonSelection = async (from, booking, msg) => {
   ];
 
   const currentAddons = booking.addons.map((a) => a.name).join(", ");
-  await sendListMessage(
-    from,
-    `Added ${selectedAddon.name} add-ons: ${currentAddons}`,
-    addonsList,
-  );
+
+  await sendListMessage(from, `Added ${selectedAddon.name}`, [
+    {
+      title: "Select More Addons",
+      rows: [
+        // Your original addonsList goes here as the 'rows' property
+        { id: "addon_spa", title: "Spa", description: "₹2000" },
+        { id: "addon_gym", title: "Gym Access", description: "₹500" },
+        { id: "addon_sauna", title: "Sauna", description: "₹800" },
+        {
+          id: "addon_none",
+          title: "None",
+          description: "Continue payment",
+        },
+      ],
+    },
+  ]);
 };
 // -----------------------------------------------------------------------------------------------------------------------
 
