@@ -14,6 +14,8 @@ import { createPaymentLink } from "../utils/payments.js";
 import dotenv from "dotenv";
 dotenv.config();
 
+//----------------------------------------------------------------------------------------------------------------------------------------------------------
+
 const router = express.Router();
 
 // Helper function to check if a slot is available in DB
@@ -32,6 +34,8 @@ const isSlotAvailable = async (centre, sport, date, timeSlot) => {
   }
 };
 
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 // Verification endpoint for webhook
 router.get("/", (req, res) => {
   const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
@@ -47,7 +51,10 @@ router.get("/", (req, res) => {
   res.sendStatus(403);
 });
 
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 // Main webhook handler
+//
+//
 router.post("/", async (req, res) => {
   console.log("=== NEW WEBHOOK REQUEST ===");
 
@@ -85,6 +92,8 @@ router.post("/", async (req, res) => {
     console.log(`Processing message from ${from}: ${msg}`);
     console.log("Message details:", { listReply, buttonReply, incomingText });
 
+    //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
     // Find or create booking
     let booking = await Booking.findOne({ phone: from });
     if (!booking) {
@@ -103,6 +112,8 @@ router.post("/", async (req, res) => {
       return res.sendStatus(200);
     }
 
+    //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
     // Dedupe by messageId
     if (messageId) {
       if (!booking.meta) booking.meta = {};
@@ -113,6 +124,8 @@ router.post("/", async (req, res) => {
       booking.meta.lastMessageId = messageId;
       booking.markModified("meta");
     }
+
+    //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     // Handle sport selection
     if (msg.startsWith("sport_")) {
@@ -129,6 +142,7 @@ router.post("/", async (req, res) => {
       await sendLocationSelection(from);
       return res.sendStatus(200);
     }
+    //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     // Handle location selection
     if (msg.startsWith("location_")) {
@@ -140,6 +154,8 @@ router.post("/", async (req, res) => {
       await booking.save();
 
       console.log("Selected location:", selectedLocation);
+
+      //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
       // Get dates with available slots
       let datesWithSlots = await getAvailableDates();
@@ -209,6 +225,8 @@ router.post("/", async (req, res) => {
 
       return res.sendStatus(200);
     }
+
+    //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     // Handle date selection
     if (msg.startsWith("dt")) {
@@ -285,7 +303,11 @@ router.post("/", async (req, res) => {
       return res.sendStatus(200);
     }
 
+    //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Handle time period selection (morning/evening)
+    //
+    //
+    //
     if (msg.startsWith("period_")) {
       const period = msg.replace("period_", "");
       const selectedDate = booking.meta.currentDate;
@@ -318,7 +340,7 @@ router.post("/", async (req, res) => {
       }
 
       // Get available slots from Google Calendar
-      // NOTE: This returns an array of strings: ["HH:MM - HH:MM", ...]
+
       let availableSlotStrings = [];
       try {
         availableSlotStrings = await getAvailableSlotsForDate(selectedDate);
@@ -332,7 +354,6 @@ router.post("/", async (req, res) => {
         }
       }
 
-      // FIX: Filter slots based on the hour from the string format
       const periodSlots = availableSlotStrings
         .filter((slotString) => {
           if (!slotString || typeof slotString !== "string") return false; // Defensive check
@@ -344,7 +365,6 @@ router.post("/", async (req, res) => {
           return slotHour >= startHour && slotHour < endHour;
         })
         .map((slotString) => ({
-          // FIX: Convert the string back into the expected object format for the list
           formatted: slotString,
           // Note: We don't need 'start' and 'end' Date objects anymore for list generation
         }));
@@ -385,6 +405,7 @@ router.post("/", async (req, res) => {
       return res.sendStatus(200);
     }
 
+    // -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Handle cancel booking
     if (msg === "cancel_booking") {
       await Booking.deleteOne({ phone: from });
@@ -394,7 +415,7 @@ router.post("/", async (req, res) => {
       );
       return res.sendStatus(200);
     }
-
+    //  -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Handle calendar/book command
     if (
       msgLower === "calendar" ||
@@ -407,7 +428,7 @@ router.post("/", async (req, res) => {
       await sendSportSelection(from);
       return res.sendStatus(200);
     }
-
+    // -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Handle slot selection
     if (msg.startsWith("sl") && /^sl\d+$/.test(msg)) {
       const timeRange = booking.meta?.slotMapping?.[msg];
@@ -433,12 +454,14 @@ router.post("/", async (req, res) => {
       return res.sendStatus(200);
     }
 
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
     // Handle name collection
     // Handle addon selection
-    if (booking.step === "selecting_addons") {
+    if (booking.step == "selecting_addons") {
       const addon = msg.id.replace("addon_", "");
 
-      if (addon === "none") {
+      if (addon == "none") {
         // User declined addons, proceed to payment
         await handleSlotSelection(from, booking, booking.meta.selectedTimeSlot);
       } else {
@@ -499,16 +522,17 @@ router.post("/", async (req, res) => {
         );
       }
 
-      // REMOVE THIS LINE - it was causing duplicate calls
-      // await handleSlotSelection(from, booking, msg);
-
       return res.sendStatus(200);
     }
+
+    // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Handle booking confirmation
     if (msg.startsWith("confirm_")) {
       await handleBookingConfirmation(from, booking, msg);
       return res.sendStatus(200);
     }
+
+    //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     // Handle start/restart
     if (
@@ -522,6 +546,8 @@ router.post("/", async (req, res) => {
       return res.sendStatus(200);
     }
 
+    // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
     // Handle exit/cancel
     if (msgLower === "exit" || msgLower === "cancel") {
       await Booking.deleteOne({ phone: from });
@@ -531,6 +557,8 @@ router.post("/", async (req, res) => {
       );
       return res.sendStatus(200);
     }
+
+    //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     // Fallback: Unknown command
     await sendMessage(
@@ -564,6 +592,8 @@ router.post("/", async (req, res) => {
     });
   }
 });
+
+//--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 // Helper function to get dates with available slots
 const getAvailableDates = async () => {
@@ -611,6 +641,8 @@ const getAvailableDates = async () => {
   return datesWithSlots;
 };
 
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 // Helper function to send sport selection
 const sendSportSelection = async (to) => {
   const sportButtons = [
@@ -622,7 +654,7 @@ const sendSportSelection = async (to) => {
 
   await sendButtonsMessage(
     to,
-    "🏃 Welcome to Twenty44. Which sport would you like to play?",
+    "Welcome to Twenty44. Which sport would you like to play?",
     sportButtons,
   );
 };
@@ -642,6 +674,8 @@ const sendLocationSelection = async (to) => {
     locationButtons,
   );
 };
+
+//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 // Helper function to send welcome message with sport selection
 const sendWelcomeMessage = async (to) => {
@@ -772,21 +806,16 @@ async function handleSlotSelection(phone, booking, msg) {
     const summary = `Booking Summary\n\nName: ${booking.name}\nSport: ${sportName}\nLocation: ${centre}\nDate: ${formattedDate}\nTime: ${timeRange}${addonsSummary}\nTotal Amount: ₹${booking.totalAmount}`;
     await sendMessage(phone, summary);
 
-    // Create a Razorpay payment link and send to the user as a tappable URL button
-    // Amount precedence: booking.meta.price -> DEFAULT_BOOKING_AMOUNT env -> 1
     try {
-      // Use stored booking.totalAmount as authoritative amount
       const paymentUrl = await createPaymentLink(
         booking,
         booking.totalAmount || 1,
       );
       if (paymentUrl) {
         const body = `💳 Please complete payment to confirm your booking.\nAmount: ₹${amount}\nTap the button below to pay.\n\nWe'll confirm automatically after successful payment.`;
-        // Use interactive URL button when available
         try {
           await sendUrlButtonMessage(phone, body, paymentUrl, "Pay Now");
         } catch (e) {
-          // Fallback to plain URL text if interactive URL button fails
           console.warn(
             "URL button failed, falling back to text link:",
             e?.message || e,
@@ -805,8 +834,6 @@ async function handleSlotSelection(phone, booking, msg) {
       );
     }
 
-    // We no longer ask for manual confirmation. The webhook will auto-confirm the booking
-    // and send the final confirmation message to the user after payment is captured.
     await sendMessage(
       phone,
       `Payment sent. We'll confirm your booking automatically once payment is received.`,
@@ -820,7 +847,8 @@ async function handleSlotSelection(phone, booking, msg) {
   }
 }
 
-// Handle booking confirmation
+// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 async function handleBookingConfirmation(phone, booking, msg) {
   try {
     if (msg === "confirm_no") {
@@ -884,6 +912,8 @@ async function handleBookingConfirmation(phone, booking, msg) {
       }
       return;
     }
+
+    //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     // Try to create Google Calendar event
     let calendarCreated = false;

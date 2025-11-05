@@ -3,8 +3,13 @@ import express from "express";
 import dotenv from "dotenv";
 dotenv.config();
 
+const getEnv = (key, defaultValue = "") => {
+  return (process.env[key] || defaultValue).trim();
+};
+
 import mongoose from "mongoose";
 import whatsappRoutes from "./routes/whatsapp.js";
+import classified from "./routes/classified.js";
 import razorpayWebhookRoutes from "./routes/razorpayWebhook.js";
 
 const app = express();
@@ -45,7 +50,7 @@ app.get("/", (req, res) => res.send("Booking bot running"));
 
 // Mount WhatsApp routes (if present)
 if (whatsappRoutes) {
-  app.use("/whatsapp", whatsappRoutes);
+  app.use("/whatsapp", classified);
 } else {
   console.warn("⚠️ whatsappRoutes not found - /whatsapp not mounted");
 }
