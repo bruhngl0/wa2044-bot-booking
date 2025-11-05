@@ -61,6 +61,8 @@ const isSlotAvailable = async (centre, sport, date, timeSlot) => {
   }
 };
 
+// ---------------------------------------------------------------------------------------------------
+//
 const extractMessageContent = (message) => {
   const interactive = message?.interactive || {};
   const buttonReply = interactive?.button_reply || null;
@@ -83,10 +85,14 @@ const extractMessageContent = (message) => {
   };
 };
 
+//-----------------------------------------------------------------------------------------------
+
 const isDuplicateMessage = (booking, messageId) => {
   if (!messageId || !booking.meta) return false;
   return booking.meta.lastMessageId === messageId;
 };
+
+//---------------------------------------------------------------------------------------------
 
 const markMessageAsProcessed = async (booking, messageId) => {
   if (!messageId) return;
@@ -95,6 +101,8 @@ const markMessageAsProcessed = async (booking, messageId) => {
   booking.markModified("meta");
   await booking.save();
 };
+
+//--------------------------------------------------------------------------------------------
 
 const formatDate = (dateStr) => {
   const date = new Date(dateStr);
@@ -108,6 +116,8 @@ const formatDate = (dateStr) => {
     day: "numeric",
   });
 };
+
+//-------------------------------------------------------------------------------------------
 
 const generateFallbackSlots = (startHour, endHour) => {
   const slots = [];
@@ -227,6 +237,8 @@ const handleSportSelection = async (from, booking, msg) => {
   await sendLocationSelection(from);
 };
 
+//------------------------------------------------------------------------------------------------------------------------------
+
 const handleLocationSelection = async (from, booking, msg) => {
   const selectedLocation = msg.split("_")[1];
   if (!booking.meta) booking.meta = {};
@@ -258,6 +270,8 @@ const handleLocationSelection = async (from, booking, msg) => {
     { title: "Available Dates", rows: dateRows },
   ]);
 };
+
+//---------------------------------------------------------------------------------------------------------------------------
 
 const handleDateSelection = async (from, booking, msg) => {
   console.log("Date selection detected:", msg);
@@ -297,6 +311,8 @@ const handleDateSelection = async (from, booking, msg) => {
     timePeriodButtons,
   );
 };
+
+//------------------------------------------------------------------------------------------------------------------------------------
 
 const handleTimePeriodSelection = async (from, booking, msg) => {
   const period = msg.replace("period_", "");
@@ -371,6 +387,8 @@ const handleTimePeriodSelection = async (from, booking, msg) => {
   ]);
 };
 
+//-----------------------------------------------------------------------------------------------------------------------------------
+
 const handleSlotSelection = async (from, booking, msg) => {
   const timeRange = booking.meta?.slotMapping?.[msg];
   const date = booking.meta?.selectedDate;
@@ -406,118 +424,60 @@ const handleSlotSelection = async (from, booking, msg) => {
   await sendMessage(from, "Please enter your full name:");
 };
 
+//---------------------------------------------------------------------------------------------------------------------
+//
+//
 const handleNameCollection = async (from, booking, msg) => {
-  booking.name = msg;
-  booking.step = "confirming_booking";
-  await booking.save();
-
-  // Prepare booking details
-  const baseAmount =
-    booking.meta?.price || Number(process.env.DEFAULT_BOOKING_AMOUNT) || 1;
-  const addonAmount = (booking.addons || []).reduce(
-    (sum, addon) => sum + addon.price,
-    0,
-  );
-  const totalAmount = baseAmount + addonAmount;
-
-  const sportName = SPORT_MAP[booking.meta.selectedSport]?.name || "Pickleball";
-  const centre =
-    LOCATION_MAP[booking.meta.selectedLocation] ||
-    booking.meta.selectedLocation;
-  const formattedDate = formatDate(booking.meta.confirmDate);
-  const timeRange = booking.meta.confirmTime;
-
-  const updatePayload = {
-    sport: sportName,
-    centre,
-    date: booking.meta.confirmDate,
-    time_slot: timeRange,
-    name: booking.name,
-    addons: booking.addons || [],
-    totalAmount: Number(totalAmount),
-    meta: booking.meta,
-    step: "payment_pending",
-  };
-
   try {
-    const updated = await Booking.findByIdAndUpdate(
-      booking._id,
-      updatePayload,
+    // Validate name
+    if (!msg || msg.trim().length < 2) {
+      await sendMessage(from, "Please enter a valid full name:");
+      return;
+    }
+
+    booking.name = msg.trim();
+
+    // DON'T save all booking details yet
+    // Just save the name and move to addon selection
+    booking.step = "selecting_addons";
+    booking.markModified("meta");
+    await booking.save();
+
+    console.log(`Name collected: ${booking.name} for booking ${booking._id}`);
+
+    // Show addon selection
+    const addonsList = [
       {
-        new: true,
-        upsert: false,
+        title: "Additional Services",
+        rows: [
+          { id: "addon_spa", title: "Spa", description: "₹2000" },
+          { id: "addon_gym", title: "Gym Access", description: "₹500" },
+          { id: "addon_sauna", title: "Sauna", description: "₹800" },
+          {
+            id: "addon_none",
+            title: "No thanks, proceed to payment",
+            description: "Continue without add-ons",
+          },
+        ],
       },
+    ];
+
+    await sendListMessage(
+      from,
+      "Would you like to add any services to your booking?",
+      addonsList,
     );
-
-    if (!updated) {
-      console.warn("Failed to update booking record:", booking._id);
-      await sendMessage(
-        from,
-        "⚠️ Could not persist booking. Please try again.",
-      );
-      return;
-    }
-
-    booking = updated;
-    console.log("Persisted booking to DB:", booking._id.toString());
-  } catch (err) {
-    if (err?.code === 11000) {
-      await sendMessage(
-        from,
-        "⚠️ Sorry, this slot was just booked by someone else. Please choose another slot or date.",
-      );
-      return;
-    }
-    throw err;
-  }
-
-  // Send summary
-  const addonsSummary =
-    booking.addons?.length > 0
-      ? "\nAdditional Services:\n" +
-        booking.addons
-          .map((addon) => `- ${addon.name}: ₹${addon.price}`)
-          .join("\n")
-      : "";
-
-  const summary = `Booking Summary\n\nName: ${booking.name}\nSport: ${sportName}\nLocation: ${centre}\nDate: ${formattedDate}\nTime: ${timeRange}${addonsSummary}\nTotal Amount: ₹${booking.totalAmount}`;
-
-  await sendMessage(from, summary);
-
-  // Send payment link
-  try {
-    const paymentUrl = await createPaymentLink(
-      booking,
-      booking.totalAmount || 1,
-    );
-    if (paymentUrl) {
-      const body = `💳 Please complete payment to confirm your booking.\nAmount: ₹${booking.totalAmount}\nTap the button below to pay.\n\nWe'll confirm automatically after successful payment.`;
-      try {
-        await sendUrlButtonMessage(from, body, paymentUrl, "Pay Now");
-      } catch (e) {
-        console.warn(
-          "URL button failed, falling back to text link:",
-          e?.message || e,
-        );
-        await sendMessage(
-          from,
-          `${body}\n${paymentUrl}\nAfter payment, tap "✅ Confirm".`,
-        );
-      }
-    }
-  } catch (err) {
-    console.error("Failed to create/send payment link:", err?.message || err);
+  } catch (error) {
+    console.error("Error in handleNameCollection:", error);
     await sendMessage(
       from,
-      "⚠️ Unable to create a payment link right now. You can still confirm and we will follow up for payment.",
+      "Sorry, there was an error. Please type 'start' to restart.",
     );
+    throw error;
   }
-
-  await sendMessage(
-    from,
-    "Payment sent. We'll confirm your booking automatically once payment is received.",
-  );
 };
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
 
 const handleBookingConfirmation = async (from, booking, msg) => {
   if (msg === "confirm_no") {
@@ -594,11 +554,16 @@ const handleBookingConfirmation = async (from, booking, msg) => {
   await Booking.deleteOne({ phone: from });
 };
 
+//-----------------------------------------------------------------------------------------------------------------------
+
 const handleAddonSelection = async (from, booking, msg) => {
   const addon = msg.replace("addon_", "");
 
   if (addon === "none") {
-    await handleSlotSelection(from, booking, booking.meta.selectedTimeSlot);
+    // User declined addons, proceed to payment
+    booking.step = "processing_payment";
+    await booking.save();
+    await processPayment(from, booking);
     return;
   }
 
@@ -608,10 +573,12 @@ const handleAddonSelection = async (from, booking, msg) => {
     return;
   }
 
+  // Add addon to booking
   if (!booking.addons) booking.addons = [];
   booking.addons.push(selectedAddon);
   await booking.save();
 
+  // Show addon selection again
   const addonsList = [
     {
       title: "Additional Services",
@@ -622,7 +589,7 @@ const handleAddonSelection = async (from, booking, msg) => {
         {
           id: "addon_none",
           title: "No thanks, proceed to payment",
-          description: "Skip additional services",
+          description: "Continue to payment",
         },
       ],
     },
@@ -631,10 +598,130 @@ const handleAddonSelection = async (from, booking, msg) => {
   const currentAddons = booking.addons.map((a) => a.name).join(", ");
   await sendListMessage(
     from,
-    `Added ${selectedAddon.name}! Current addons: ${currentAddons}\n\nWould you like to add more services?`,
+    `✅ Added ${selectedAddon.name}!\n\nCurrent add-ons: ${currentAddons}\n\nAdd more or proceed to payment?`,
     addonsList,
   );
 };
+// -----------------------------------------------------------------------------------------------------------------------
+
+//new handlePyament function
+
+const processPayment = async (from, booking) => {
+  try {
+    // NOW prepare the final booking with all details
+    const baseAmount =
+      booking.meta?.price || Number(process.env.DEFAULT_BOOKING_AMOUNT) || 1;
+    const addonAmount = (booking.addons || []).reduce(
+      (sum, addon) => sum + addon.price,
+      0,
+    );
+    const totalAmount = baseAmount + addonAmount;
+
+    const sportName =
+      SPORT_MAP[booking.meta.selectedSport]?.name || "Pickleball";
+    const centre =
+      LOCATION_MAP[booking.meta.selectedLocation] ||
+      booking.meta.selectedLocation;
+    const date = booking.meta.confirmDate || booking.meta.selectedDate;
+    const timeRange = booking.meta.confirmTime || booking.meta.selectedTimeSlot;
+
+    // Check slot availability one more time before persisting
+    const available = await isSlotAvailable(centre, sportName, date, timeRange);
+    if (!available) {
+      await sendMessage(
+        from,
+        "⚠️ Sorry, this slot was just booked by someone else. Please start over and choose another slot.",
+      );
+      await Booking.deleteOne({ phone: from });
+      return;
+    }
+
+    const updatePayload = {
+      sport: sportName,
+      centre,
+      date,
+      time_slot: timeRange,
+      name: booking.name,
+      addons: booking.addons || [],
+      totalAmount: Number(totalAmount),
+      meta: booking.meta,
+      step: "payment_pending",
+      paid: false, // Explicitly set to false
+    };
+
+    // Save booking to DB - this creates the slot reservation
+    const updated = await Booking.findByIdAndUpdate(
+      booking._id,
+      updatePayload,
+      { new: true, upsert: false },
+    );
+
+    if (!updated) {
+      console.warn("Failed to update booking record:", booking._id);
+      await sendMessage(from, "⚠️ Could not create booking. Please try again.");
+      return;
+    }
+
+    booking = updated;
+    console.log("✅ Booking reserved in DB:", booking._id.toString());
+
+    // Format and send summary
+    const formattedDate = formatDate(date);
+    const addonsSummary =
+      booking.addons?.length > 0
+        ? "\n\n📋 Add-ons:\n" +
+          booking.addons
+            .map((addon) => `  • ${addon.name}: ₹${addon.price}`)
+            .join("\n")
+        : "";
+
+    const summary = `📝 *Booking Summary*\n\n👤 Name: ${booking.name}\n🏓 Sport: ${sportName}\n📍 Location: ${centre}\n📅 Date: ${formattedDate}\n🕒 Time: ${timeRange}${addonsSummary}\n\n💰 *Total Amount: ₹${booking.totalAmount}*`;
+
+    await sendMessage(from, summary);
+
+    // Create and send payment link
+    try {
+      const paymentUrl = await createPaymentLink(booking, booking.totalAmount);
+      if (paymentUrl) {
+        const paymentMsg = `💳 *Payment Required*\n\nAmount: ₹${booking.totalAmount}\n\nPlease complete your payment to confirm the booking.\n\nWe'll automatically confirm once payment is received! ✅`;
+
+        try {
+          await sendUrlButtonMessage(
+            from,
+            paymentMsg,
+            paymentUrl,
+            "💳 Pay Now",
+          );
+        } catch (e) {
+          console.warn("URL button failed, sending text link:", e?.message);
+          await sendMessage(from, `${paymentMsg}\n\n${paymentUrl}`);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to create payment link:", err);
+      await sendMessage(
+        from,
+        "⚠️ Unable to generate payment link right now. Our team will contact you shortly for payment details.",
+      );
+    }
+  } catch (error) {
+    // Handle duplicate booking error
+    if (error?.code === 11000) {
+      console.warn("Slot conflict during payment:", error);
+      await sendMessage(
+        from,
+        "⚠️ Sorry, this slot was just booked. Please type 'start' to choose another time.",
+      );
+      await Booking.deleteOne({ phone: from });
+      return;
+    }
+
+    console.error("Error in processPayment:", error);
+    throw error;
+  }
+};
+
+//---------------------------------------------------------------------------------------------------------------------------
 
 const handleStartCommand = async (from) => {
   await Booking.deleteOne({ phone: from });
@@ -710,7 +797,31 @@ router.post("/", async (req, res) => {
     await markMessageAsProcessed(booking, messageId);
 
     // Route to appropriate handler based on message content and booking step
-    if (msg.startsWith("sport_")) {
+    // IMPORTANT: Check global commands first, then step-based handlers
+
+    if (["start", "hi", "hello", "1"].includes(msgLower)) {
+      await handleStartCommand(from);
+    } else if (["exit", "cancel"].includes(msgLower)) {
+      await handleExitCommand(from);
+    } else if (
+      booking.step === "collecting_name" &&
+      !msg.startsWith("sport_") &&
+      !msg.startsWith("location_") &&
+      !msg.startsWith("dt") &&
+      !msg.startsWith("period_") &&
+      !msg.startsWith("sl") &&
+      !msg.startsWith("addon_") &&
+      !msg.startsWith("confirm_")
+    ) {
+      // User is entering their name (not a command)
+      await handleNameCollection(from, booking, msg);
+    } else if (
+      booking.step === "selecting_addons" &&
+      msg.startsWith("addon_")
+    ) {
+      // User is selecting addons
+      await handleAddonSelection(from, booking, msg);
+    } else if (msg.startsWith("sport_")) {
       await handleSportSelection(from, booking, msg);
     } else if (msg.startsWith("location_")) {
       await handleLocationSelection(from, booking, msg);
@@ -720,21 +831,16 @@ router.post("/", async (req, res) => {
       await handleTimePeriodSelection(from, booking, msg);
     } else if (msg.startsWith("sl") && /^sl\d+$/.test(msg)) {
       await handleSlotSelection(from, booking, msg);
-    } else if (booking.step === "collecting_name") {
-      await handleNameCollection(from, booking, msg);
-    } else if (booking.step === "selecting_addons") {
-      await handleAddonSelection(from, booking, msg);
     } else if (msg.startsWith("confirm_")) {
       await handleBookingConfirmation(from, booking, msg);
     } else if (msg === "cancel_booking") {
       await handleExitCommand(from);
     } else if (["calendar", "check calendar", "book"].includes(msgLower)) {
       await handleCalendarCommand(from, booking);
-    } else if (["start", "hi", "hello", "1"].includes(msgLower)) {
-      await handleStartCommand(from);
-    } else if (["exit", "cancel"].includes(msgLower)) {
-      await handleExitCommand(from);
     } else {
+      console.log(
+        `Unrecognized input from ${from}: "${msg}" (step: ${booking.step})`,
+      );
       await sendMessage(
         from,
         "I didn't understand that. Type 'start' to begin or 'help' for assistance.",
@@ -753,7 +859,10 @@ router.post("/", async (req, res) => {
       const from =
         req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from;
       if (from) {
-        await sendMessage(from, "An error occurred. Please try again.");
+        await sendMessage(
+          from,
+          "An error occurred. Please try again or type 'start' to restart.",
+        );
       }
     } catch (e) {
       console.error("Failed to send error message to user:", e);
