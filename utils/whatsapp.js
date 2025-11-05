@@ -86,27 +86,16 @@ export const sendUrlButtonMessage = async (
   return sendApi(payload);
 };
 
-// Change the signature to accept the necessary text fields
-export const sendListMessage = async (
-  to,
-  headerText,
-  bodyText,
-  buttonText,
-  sections,
-) => {
+export const sendListMessage = async (to, headerText, sections) => {
   const payload = {
     messaging_product: "whatsapp",
     to,
     type: "interactive",
     interactive: {
       type: "list",
-      header: { type: "text", text: headerText }, // Use the passed header text
-      body: { text: bodyText }, // ❗ Added REQUIRED body
-      // footer: { text: "Optional footer" }, // Add if needed
-      action: {
-        button: buttonText, // Use the passed button text
-        sections, // Use the passed sections
-      },
+      header: { type: "text", text: headerText },
+      body: { text: "Please select from the list below" },
+      action: { button: "View Options", sections },
     },
   };
   return sendApi(payload);
