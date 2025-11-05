@@ -11,13 +11,18 @@ const isConfigured = !!TOKEN && !!PHONE_ID;
 
 const sendApi = async (payload) => {
   if (!isConfigured) {
-    console.warn("WhatsApp not configured (ACCESS_TOKEN or PHONE_NUMBER_ID missing).");
+    console.warn(
+      "WhatsApp not configured (ACCESS_TOKEN or PHONE_NUMBER_ID missing).",
+    );
     return null;
   }
   const url = `https://graph.facebook.com/${API_VER}/${PHONE_ID}/messages`;
   try {
     const resp = await axios.post(url, payload, {
-      headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${TOKEN}`,
+        "Content-Type": "application/json",
+      },
     });
     return resp.data;
   } catch (err) {
@@ -37,7 +42,9 @@ export const sendMessage = async (to, text) => {
 };
 
 export const sendButtonsMessage = async (to, body, buttons) => {
-  const actionButtons = buttons.slice(0, 3).map((b) => ({ type: "reply", reply: { id: b.id, title: b.title } }));
+  const actionButtons = buttons
+    .slice(0, 3)
+    .map((b) => ({ type: "reply", reply: { id: b.id, title: b.title } }));
   const payload = {
     messaging_product: "whatsapp",
     to,
@@ -52,7 +59,12 @@ export const sendButtonsMessage = async (to, body, buttons) => {
 };
 
 // Send an interactive message with a single URL button (call-to-action)
-export const sendUrlButtonMessage = async (to, body, url, title = 'Pay Now') => {
+export const sendUrlButtonMessage = async (
+  to,
+  body,
+  url,
+  title = "Pay Now",
+) => {
   const payload = {
     messaging_product: "whatsapp",
     to,
@@ -74,15 +86,14 @@ export const sendUrlButtonMessage = async (to, body, url, title = 'Pay Now') => 
   return sendApi(payload);
 };
 
-export const sendListMessage = async (to, headerText, sections) => {
+export const sendListMessage = async (to, bodyText, sections) => {
   const payload = {
     messaging_product: "whatsapp",
     to,
     type: "interactive",
     interactive: {
       type: "list",
-      header: { type: "text", text: headerText },
-      body: { text: "Please select from the list below" },
+      body: { text: bodyText },
       action: { button: "View Options", sections },
     },
   };

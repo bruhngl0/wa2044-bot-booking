@@ -216,7 +216,7 @@ router.post("/", async (req, res) => {
 
       console.log("Saved date mapping:", booking.meta.dateMapping);
 
-      await sendListMessage(from, "Select a Date", [
+      await sendListMessage(from, "Select Date", [
         {
           title: "Available Dates",
           rows: dateRows,
@@ -395,7 +395,7 @@ router.post("/", async (req, res) => {
       console.log("✅ Saved slot mapping:", booking.meta.slotMapping);
 
       // Send time slot selection as a list
-      await sendListMessage(from, "🕒 Select a Time Slot", [
+      await sendListMessage(from, "Select Time Slot", [
         {
           title: `${period === "morning" ? "🌅 Morning" : "🌃 Evening"} Slots`,
           rows: slotRows,

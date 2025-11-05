@@ -462,11 +462,7 @@ const handleNameCollection = async (from, booking, msg) => {
       },
     ];
 
-    await sendListMessage(
-      from,
-      "Would you like to add any services to your booking?",
-      addonsList,
-    );
+    await sendListMessage(from, "Add Services?", addonsList);
   } catch (error) {
     console.error("Error in handleNameCollection:", error);
     await sendMessage(
