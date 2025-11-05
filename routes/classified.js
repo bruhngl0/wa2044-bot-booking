@@ -266,9 +266,17 @@ const handleLocationSelection = async (from, booking, msg) => {
 
   console.log("Saved date mapping:", booking.meta.dateMapping);
 
-  await sendListMessage(from, "Select Date", [
-    { title: "Available Dates", rows: dateRows },
-  ]);
+  // --- 🎯 FIX APPLIED HERE ---
+  const listSections = [{ title: "Available Dates", rows: dateRows }];
+
+  const headerText = "🗓️ Select Your Booking Date"; // Header
+  const bodyText = `Great! We've noted your location preference (${selectedLocation}). Now, please choose an available date for your booking:`; // Required Body
+  const buttonText = "View Dates"; // Required Button Text
+
+  // Assuming the updated sendListMessage signature is:
+  // sendListMessage(to, headerText, bodyText, buttonText, sections)
+  await sendListMessage(from, headerText, bodyText, buttonText, listSections);
+  // ---------------------------
 };
 
 //---------------------------------------------------------------------------------------------------------------------------
@@ -462,7 +470,13 @@ const handleNameCollection = async (from, booking, msg) => {
       },
     ];
 
-    await sendListMessage(from, "Add Services?", addonsList);
+    // WITH the correct parameters:
+    const headerText = "Add-Ons Available";
+    const bodyText =
+      "We've collected your name! Would you like to add any extra services to your booking?";
+    const buttonText = "View Add-Ons"; // This is the main button text
+
+    await sendListMessage(from, headerText, bodyText, buttonText, addonsList);
   } catch (error) {
     console.error("Error in handleNameCollection:", error);
     await sendMessage(
@@ -563,6 +577,7 @@ const handleAddonSelection = async (from, booking, msg) => {
     return;
   }
 
+  // NOTE: Assuming ADDON_PRICES[addon] exists and has a 'name' property
   const selectedAddon = ADDON_PRICES[addon];
   if (!selectedAddon) {
     await sendMessage(from, "Invalid selection. Please try again.");
@@ -591,14 +606,25 @@ const handleAddonSelection = async (from, booking, msg) => {
     },
   ];
 
+  // --- 🎯 FIX APPLIED HERE ---
   const currentAddons = booking.addons.map((a) => a.name).join(", ");
+
+  // 1. Define the required List Message text fields
+  const headerText = "✅ Add-On Added!"; // Header
+  const bodyText = `You successfully added **${selectedAddon.name}**. \n\nYour current selected add-ons are: **${currentAddons}**. \n\nWould you like to select another add-on or proceed to payment?`; // Required Body (Updated to be descriptive)
+  const buttonText = "View Options"; // Required Button Text
+
+  // 2. Call the updated sendListMessage function
+  // sendListMessage(to, headerText, bodyText, buttonText, sections)
   await sendListMessage(
     from,
-    `Added ${selectedAddon.name} ${currentAddons}`,
-    addonsList,
+    headerText,
+    bodyText,
+    buttonText,
+    addonsList, // This is the 'sections' argument
   );
-};
-// -----------------------------------------------------------------------------------------------------------------------
+  // ---------------------------
+}; // -----------------------------------------------------------------------------------------------------------------------
 
 //new handlePyament function
 
