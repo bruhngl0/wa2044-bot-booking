@@ -5,6 +5,7 @@ import {
   sendButtonsMessage,
   sendListMessage,
   sendUrlButtonMessage,
+  sendListMessageOne,
 } from "../utils/whatsapp.js";
 import {
   getAvailableSlotsForDate,
@@ -121,14 +122,27 @@ const formatDate = (dateStr) => {
 
 const generateFallbackSlots = (startHour, endHour) => {
   const slots = [];
+  const formatTime12Hour = (hour) => {
+    hour = hour % 24;
+    const period = hour >= 12 ? "PM" : "AM";
+    let displayHour = hour % 12;
+    if (displayHour === 0) {
+      displayHour = 12; // 0 (midnight) becomes 12 AM, 12 (noon) remains 12 PM
+    }
+    return `${displayHour.toString().padStart(2, " ")}:00 ${period}`;
+  };
+
   for (let hour = startHour; hour < endHour; hour++) {
-    const startTimeStr = hour.toString().padStart(2, "0") + ":00";
-    const endTimeStr = (hour + 1).toString().padStart(2, "0") + ":00";
+    const startTimeStr = formatTime12Hour(hour);
+    const endTimeStr = formatTime12Hour(hour + 1);
     slots.push(`${startTimeStr} - ${endTimeStr}`);
   }
+
   return slots;
 };
-
+// ----------------------------------------------------------------------------------------
+//
+//
 const getAvailableDates = async () => {
   const datesWithSlots = [];
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -593,26 +607,22 @@ const handleAddonSelection = async (from, booking, msg) => {
 
   const currentAddons = booking.addons.map((a) => a.name).join(", ");
 
-  await sendListMessage(
-    from,
-    `Added ${selectedAddon.name}\n Anything else you would like to add?`,
-    [
-      {
-        title: "Select More Addons",
-        rows: [
-          // Your original addonsList goes here as the 'rows' property
-          { id: "addon_spa", title: "Spa", description: "₹2000" },
-          { id: "addon_gym", title: "Gym Access", description: "₹500" },
-          { id: "addon_sauna", title: "Sauna", description: "₹800" },
-          {
-            id: "addon_none",
-            title: "None",
-            description: "Continue payment",
-          },
-        ],
-      },
-    ],
-  );
+  await sendListMessageOne(from, `Added ${selectedAddon.name}`, [
+    {
+      title: "Select More Addons",
+      rows: [
+        // Your original addonsList goes here as the 'rows' property
+        { id: "addon_spa", title: "Spa", description: "₹2000" },
+        { id: "addon_gym", title: "Gym Access", description: "₹500" },
+        { id: "addon_sauna", title: "Sauna", description: "₹800" },
+        {
+          id: "addon_none",
+          title: "None",
+          description: "Continue payment",
+        },
+      ],
+    },
+  ]);
 };
 // -----------------------------------------------------------------------------------------------------------------------
 
