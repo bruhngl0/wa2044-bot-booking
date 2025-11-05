@@ -5,6 +5,7 @@ import {
   sendButtonsMessage,
   sendListMessage,
   sendUrlButtonMessage,
+  sendListMessageOne,
 } from "../utils/whatsapp.js";
 import {
   getAvailableSlotsForDate,
@@ -462,7 +463,17 @@ const handleNameCollection = async (from, booking, msg) => {
       },
     ];
 
-    await sendListMessage(from, "Add Services?", addonsList);
+    const headerText = "Add-Ons Available";
+    const bodyText = "Select:";
+    const buttonText = "View Add-Ons"; // This is the main button text
+
+    await sendListMessageOne(
+      from,
+      headerText,
+      bodyText,
+      buttonText,
+      addonsList,
+    );
   } catch (error) {
     console.error("Error in handleNameCollection:", error);
     await sendMessage(
