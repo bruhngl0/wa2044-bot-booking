@@ -319,34 +319,35 @@ const handleDateSelection = async (from, booking, msg) => {
 
   await sendListMessage(from, "Select Time Period", [
     {
-      title: `Time Periods - ${formattedDate}`,
+      title: "Select Time Period",
       rows: [
+        // Your original addonsList goes here as the 'rows' property
         {
           id: "period_morning",
-          title: "🌅 6 AM – 10:30 AM",
-          description: "9 slots available",
+          title: "6 AM - 10:30 AM",
+          description: "morning",
         },
         {
           id: "period_midday",
-          title: "☀️ 10:30 AM – 3 PM",
-          description: "9 slots available",
+          title: "10:30 AM - 3 PM",
+          description: "mid day",
         },
         {
           id: "period_afternoon",
-          title: "🌤️ 3 PM – 7:30 PM",
-          description: "9 slots available",
+          title: "3 PM - 7:30 PM",
+          description: "afternoon",
         },
         {
           id: "period_evening",
-          title: "🌃 7:30 PM – 12 AM",
-          description: "9 slots available",
+          title: "7:30 PM - 12 AM",
+          description: "evening",
         },
       ],
     },
   ]);
 
-  // Send as list for better UI
-};
+
+
 
 const handleTimePeriodSelection = async (from, booking, msg) => {
   const period = msg.replace("period_", "");
