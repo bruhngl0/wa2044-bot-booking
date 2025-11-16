@@ -317,7 +317,14 @@ const handleDateSelection = async (from, booking, msg) => {
 
   const formattedDate = formatDate(selectedDate);
 
-  await sendListMessage(from, "Select Time Period", [
+  const timePeriodButtons = [
+    { id: "period_morning", title: "🌅 6 AM – 10:30 AM" },
+    { id: "period_midday", title: "☀️ 10:30 AM – 3 PM" },
+    { id: "period_afternoon", title: "🌤️ 3 PM – 7:30 PM" },
+    { id: "period_evening", title: "🌃 7:30 PM – 12 AM" },
+  ];
+
+  await sendListMessage(from, "Select Addons", [
     {
       title: "Select Time Period",
       rows: [
@@ -346,8 +353,8 @@ const handleDateSelection = async (from, booking, msg) => {
     },
   ]);
 
-
-
+  // Send as list for better UI
+};
 
 const handleTimePeriodSelection = async (from, booking, msg) => {
   const period = msg.replace("period_", "");
