@@ -819,12 +819,13 @@ router.post("/", async (req, res) => {
     }
 
     const { msg, msgLower, from, messageId } = extractMessageContent(message);
-    console.log(
-      `Processing message from ${from}: ${msg} (step: ${booking?.step || "none"})`,
-    );
 
     // Find or create booking
     let booking = await Booking.findOne({ phone: from });
+
+    console.log(
+      `Processing message from ${from}: ${msg} (step: ${booking?.step || "none"})`,
+    );
     if (!booking) {
       booking = new Booking({ phone: from, step: "welcome", meta: {} });
       await booking.save();
