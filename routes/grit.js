@@ -324,19 +324,18 @@ const handleDateSelection = async (from, booking, msg) => {
     { id: "period_evening", title: "🌃 7:30 PM – 12 AM" },
   ];  */
 
-  await sendListMessage(from, "Select Time Period", [
+  await sendListMessage(from, "Select Addons", [
     {
-      title: `Time Periods - ${formattedDate}`,
+      title: "Select Addons",
       rows: [
         // Your original addonsList goes here as the 'rows' property
-        { id: "period_morning", title: "🌅 6 AM – 10:30 AM" },
-        { id: "period_midday", title: "☀️ 10:30 AM – 3 PM" },
-        { id: "period_afternoon", title: "🌤️ 3 PM – 7:30 PM" },
-        { id: "period_evening", title: "🌃 7:30 PM – 12 AM" },
+        { id: "addon_spa", title: "Spa", description: "₹2000" },
+        { id: "addon_gym", title: "Gym Access", description: "₹500" },
+        { id: "addon_sauna", title: "Sauna", description: "₹800" },
         {
           id: "addon_none",
           title: "None",
-          description: "Continue",
+          description: "Continue payment",
         },
       ],
     },
