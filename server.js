@@ -9,7 +9,7 @@ const getEnv = (key, defaultValue = "") => {
 
 import mongoose from "mongoose";
 import whatsappRoutes from "./routes/whatsapp.js";
-import classified from "./routes/classified.js";
+import grit from "./routes/grit.js";
 import razorpayWebhookRoutes from "./routes/razorpayWebhook.js";
 
 const app = express();
@@ -50,7 +50,7 @@ app.get("/", (req, res) => res.send("Booking bot running"));
 
 // Mount WhatsApp routes (if present)
 if (whatsappRoutes) {
-  app.use("/whatsapp", classified);
+  app.use("/whatsapp", grit);
 } else {
   console.warn("⚠️ whatsappRoutes not found - /whatsapp not mounted");
 }
@@ -128,4 +128,3 @@ if (!mongoConnectUri) {
 }
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
