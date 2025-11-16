@@ -317,29 +317,35 @@ const handleDateSelection = async (from, booking, msg) => {
 
   const formattedDate = formatDate(selectedDate);
 
-  /*  const timePeriodButtons = [
-    { id: "period_morning", title: "🌅 6 AM – 10:30 AM" },
-    { id: "period_midday", title: "☀️ 10:30 AM – 3 PM" },
-    { id: "period_afternoon", title: "🌤️ 3 PM – 7:30 PM" },
-    { id: "period_evening", title: "🌃 7:30 PM – 12 AM" },
-  ];  */
-
-  await sendListMessage(from, "Select Addons", [
+  await sendListMessage(from, "Select Time Period", [
     {
-      title: "Select Addons",
+      title: `Time Periods - ${formattedDate}`,
       rows: [
-        // Your original addonsList goes here as the 'rows' property
-        { id: "addon_spa", title: "Spa", description: "₹2000" },
-        { id: "addon_gym", title: "Gym Access", description: "₹500" },
-        { id: "addon_sauna", title: "Sauna", description: "₹800" },
         {
-          id: "addon_none",
-          title: "None",
-          description: "Continue payment",
+          id: "period_morning",
+          title: "🌅 6 AM – 10:30 AM",
+          description: "9 slots available",
+        },
+        {
+          id: "period_midday",
+          title: "☀️ 10:30 AM – 3 PM",
+          description: "9 slots available",
+        },
+        {
+          id: "period_afternoon",
+          title: "🌤️ 3 PM – 7:30 PM",
+          description: "9 slots available",
+        },
+        {
+          id: "period_evening",
+          title: "🌃 7:30 PM – 12 AM",
+          description: "9 slots available",
         },
       ],
     },
   ]);
+
+  // Send as list for better UI
 };
 
 const handleTimePeriodSelection = async (from, booking, msg) => {
