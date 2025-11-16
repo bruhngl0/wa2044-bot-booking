@@ -315,16 +315,7 @@ const handleDateSelection = async (from, booking, msg) => {
 
   console.log("Saved selected date:", selectedDate);
 
-  const formattedDate = formatDate(selectedDate);
-
-  const timePeriodButtons = [
-    { id: "period_morning", title: "🌅 6 AM – 10:30 AM" },
-    { id: "period_midday", title: "☀️ 10:30 AM – 3 PM" },
-    { id: "period_afternoon", title: "🌤️ 3 PM – 7:30 PM" },
-    { id: "period_evening", title: "🌃 7:30 PM – 12 AM" },
-  ];
-
-  await sendListMessage(from, "Select Addons", [
+  await sendListMessage(from, "Select Time Period", [
     {
       title: "Select Time Period",
       rows: [
@@ -332,22 +323,22 @@ const handleDateSelection = async (from, booking, msg) => {
         {
           id: "period_morning",
           title: "6 AM - 10:30 AM",
-          description: "morning",
+          description: "Morning",
         },
         {
           id: "period_midday",
           title: "10:30 AM - 3 PM",
-          description: "mid day",
+          description: "Mid Day",
         },
         {
           id: "period_afternoon",
           title: "3 PM - 7:30 PM",
-          description: "afternoon",
+          description: "Afternoon",
         },
         {
           id: "period_evening",
           title: "7:30 PM - 12 AM",
-          description: "evening",
+          description: "Evening",
         },
       ],
     },
@@ -480,24 +471,36 @@ const handleAdditionalSlotQuestion = async (from, booking, msg) => {
     booking.step = "selecting_time_period_additional";
     await booking.save();
 
-    const formattedDate = formatDate(booking.meta.selectedDate);
-    const timePeriodButtons = [
-      { id: "period_morning", title: "🌅 6 AM – 10:30 AM" },
-      { id: "period_midday", title: "☀️ 10:30 AM – 3 PM" },
-      { id: "period_afternoon", title: "🌤️ 3 PM – 7:30 PM" },
-      { id: "period_evening", title: "🌃 7:30 PM – 12 AM" },
-    ];
-
-    await sendListMessage(from, "Select Another Time Period", [
+    //=====================================================================================================================
+    await sendListMessage(from, "Select Time Period", [
       {
-        title: `Time Periods - ${formattedDate}`,
-        rows: timePeriodButtons.map((btn) => ({
-          id: btn.id,
-          title: btn.title,
-          description: "9 slots available",
-        })),
+        title: "Select Time Period",
+        rows: [
+          // Your original addonsList goes here as the 'rows' property
+          {
+            id: "period_morning",
+            title: "6 AM - 10:30 AM",
+            description: "Morning",
+          },
+          {
+            id: "period_midday",
+            title: "10:30 AM - 3 PM",
+            description: "Mid Day",
+          },
+          {
+            id: "period_afternoon",
+            title: "3 PM - 7:30 PM",
+            description: "Afternoon",
+          },
+          {
+            id: "period_evening",
+            title: "7:30 PM - 12 AM",
+            description: "Evening",
+          },
+        ],
       },
     ]);
+    //    ===================================================================================================================
   } else {
     // Proceed to addons
     booking.step = "selecting_addons";
@@ -552,7 +555,7 @@ const handleAdditionalSlotSelection = async (from, booking, msg) => {
 
   await sendButtonsMessage(
     from,
-    `✅ Slot added: ${timeRange}\n\n📋 Your slots:\n${slotsList}\n\nWould you like to add another slot?`,
+    `Slot added: ${timeRange}\n\n Your slots:\n${slotsList}\n\nWould you like to add another slot?`,
     addSlotButtons,
   );
 };
@@ -613,7 +616,7 @@ const handleAddonSelection = async (from, booking, msg) => {
 
   // Show selection again
   const currentAddons = booking.addons.map((a) => a.name).join(", ");
-  await sendListMessageOne(from, `✅ Added: ${selectedAddon.name}`, [
+  await sendListMessageOne(from, `Added: ${selectedAddon.name}`, [
     {
       title: "Select More Addons",
       rows: [
@@ -656,24 +659,24 @@ const showBookingSummary = async (from, booking) => {
       : "\n\n📋 Add-ons: None";
 
   const summary = `
-📝 *BOOKING SUMMARY*
+*BOOKING SUMMARY*
 
-👤 Name: ${booking.name}
-📅 Date: ${formattedDate}
+Name: ${booking.name}
+Date: ${formattedDate}
 
-🕒 Time Slots (${slotCount}):
+Time Slots (${slotCount}):
 ${slotsList}${addonsSummary}
 
 ━━━━━━━━━━━━━━━━━━
-💰 *Total Amount: ₹${totalAmount}*
+*Total Amount: ₹${totalAmount}*
 ━━━━━━━━━━━━━━━━━━
   `.trim();
 
   await sendMessage(from, summary);
 
   const confirmButtons = [
-    { id: "confirm_yes", title: "✅ Confirm & Pay" },
-    { id: "confirm_no", title: "❌ Cancel" },
+    { id: "confirm_yes", title: "Confirm & Pay" },
+    { id: "confirm_no", title: "Cancel" },
   ];
 
   await sendButtonsMessage(
@@ -746,21 +749,16 @@ const processPayment = async (from, booking) => {
     }
 
     booking = updated;
-    console.log("✅ Booking reserved in DB:", booking._id.toString());
+    console.log("Booking reserved in DB:", booking._id.toString());
 
     // Create payment link
     try {
       const paymentUrl = await createPaymentLink(booking, booking.totalAmount);
       if (paymentUrl) {
-        const paymentMsg = `💳 *Payment Required*\n\nAmount: ₹${booking.totalAmount}\n\nPlease complete your payment to confirm the booking.\n\nWe'll automatically confirm once payment is received! ✅`;
+        const paymentMsg = `*Payment Required*\n\nAmount: ₹${booking.totalAmount}\n\nPlease complete your payment to confirm the booking.\n\nWe'll automatically confirm once payment is received! ✅`;
 
         try {
-          await sendUrlButtonMessage(
-            from,
-            paymentMsg,
-            paymentUrl,
-            "💳 Pay Now",
-          );
+          await sendUrlButtonMessage(from, paymentMsg, paymentUrl, "Pay Now");
         } catch (e) {
           console.warn("URL button failed, sending text link:", e?.message);
           await sendMessage(from, `${paymentMsg}\n\n${paymentUrl}`);
