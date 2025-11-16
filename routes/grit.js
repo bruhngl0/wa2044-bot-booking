@@ -34,7 +34,7 @@ const ADDON_PRICES = {
 };
 
 const MEMBERSHIP_PAGE_URL =
-  process.env.MEMBERSHIP_PAGE_URL || "https://twenty44.com/memberships";
+  process.env.MEMBERSHIP_PAGE_URL || "https://twenty44.in/membership";
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -208,6 +208,7 @@ const sendWelcomeMessage = async (to) => {
   const welcomeButtons = [
     { id: "action_book", title: "Book A Court" },
     { id: "action_membership", title: "Discover Memberships" },
+    { id: "action_enquiry", tile: "Make an inquiry" },
   ];
   await sendButtonsMessage(
     to,
@@ -226,20 +227,32 @@ const sendSessionExpired = async (to) => {
 
 const handleWelcomeAction = async (from, booking, msg) => {
   const action = msg.split("_")[1];
+  if (action === "enquiry") {
+    try {
+      await sendUrlButtonMessage(
+        from,
+        "Custome support",
+        "Phone: +919845382044",
+        "Make an inquiry",
+      );
+    } catch (e) {
+      await sendMessage(from, "Customer Support: +919845382044");
+    }
+  }
 
   if (action === "membership") {
     // Send membership link
     try {
       await sendUrlButtonMessage(
         from,
-        "🎯 Explore our exclusive membership plans and benefits!",
+        "Explore our exclusive membership plans and benefits!",
         MEMBERSHIP_PAGE_URL,
         "View Memberships",
       );
     } catch (e) {
       await sendMessage(
         from,
-        `🎯 Explore our memberships: ${MEMBERSHIP_PAGE_URL}`,
+        `Explore our memberships: ${MEMBERSHIP_PAGE_URL}`,
       );
     }
     // Reset booking for fresh start
@@ -252,7 +265,7 @@ const handleWelcomeAction = async (from, booking, msg) => {
     await booking.save();
     await sendMessage(
       from,
-      "Great! Let's book your court. 😊\n\nPlease enter your full name:",
+      "Great! Let's book your court.\n\nPlease enter your full name:",
     );
   }
 };
@@ -458,7 +471,7 @@ const handleSlotSelection = async (from, booking, msg) => {
 
   await sendButtonsMessage(
     from,
-    `✅ Slot added: ${timeRange}\n\nWould you like to add an additional slot?`,
+    `Slot added: ${timeRange}\n\nWould you like to add an additional slot?`,
     addSlotButtons,
   );
 };
@@ -652,11 +665,11 @@ const showBookingSummary = async (from, booking) => {
     .join("\n");
   const addonsSummary =
     booking.addons?.length > 0
-      ? "\n\n📋 Add-ons:\n" +
+      ? "\n\n Add-ons:\n" +
         booking.addons
           .map((addon) => `  • ${addon.name}: ₹${addon.price}`)
           .join("\n")
-      : "\n\n📋 Add-ons: None";
+      : "\n\n Add-ons: None";
 
   const summary = `
 *BOOKING SUMMARY*
@@ -667,9 +680,9 @@ Date: ${formattedDate}
 Time Slots (${slotCount}):
 ${slotsList}${addonsSummary}
 
-━━━━━━━━━━━━━━━━━━
+
 *Total Amount: ₹${totalAmount}*
-━━━━━━━━━━━━━━━━━━
+
   `.trim();
 
   await sendMessage(from, summary);
