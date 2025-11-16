@@ -208,7 +208,6 @@ const sendWelcomeMessage = async (to) => {
   const welcomeButtons = [
     { id: "action_book", title: "Book A Court" },
     { id: "action_membership", title: "Discover Memberships" },
-    { id: "action_enquiry", tile: "Make an inquiry" },
   ];
   await sendButtonsMessage(
     to,
@@ -227,18 +226,6 @@ const sendSessionExpired = async (to) => {
 
 const handleWelcomeAction = async (from, booking, msg) => {
   const action = msg.split("_")[1];
-  if (action === "enquiry") {
-    try {
-      await sendUrlButtonMessage(
-        from,
-        "Custome support",
-        "Phone: +919845382044",
-        "Make an inquiry",
-      );
-    } catch (e) {
-      await sendMessage(from, "Customer Support: +919845382044");
-    }
-  }
 
   if (action === "membership") {
     // Send membership link
