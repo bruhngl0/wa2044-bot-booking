@@ -64,6 +64,7 @@ const isSlotAvailable = async (date, timeSlot) => {
 };
 
 const extractMessageContent = (message) => {
+  // WATI webhook has similar structure to WhatsApp Cloud API
   const interactive = message?.interactive || {};
   const buttonReply = interactive?.button_reply || null;
   const listReply = interactive?.list_reply || null;
@@ -84,7 +85,6 @@ const extractMessageContent = (message) => {
     messageId: message?.id,
   };
 };
-
 /*const extractMessageContent = (message) => {
   const interactive = message?.interactive || {};
   const buttonReply = interactive?.button_reply || null;
@@ -830,7 +830,7 @@ const handleExitCommand = async (from) => {
 // WEBHOOK ENDPOINTS
 // ============================================================================
 
-/*router.get("/", (req, res) => {
+router.get("/", (req, res) => {
   const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
@@ -842,51 +842,66 @@ const handleExitCommand = async (from) => {
   }
   console.error("Webhook verification failed");
   res.sendStatus(403);
-}); */
+});
 
 router.post("/", async (req, res) => {
-  console.log("=== NEW WATI WEBHOOK REQUEST ===");
-  console.log("Webhook body:", JSON.stringify(req.body, null, 2));
+  console.log("=== NEW WEBHOOK REQUEST ===");
+  console.log("Full webhook body:", JSON.stringify(req.body, null, 2));
 
   try {
-    // WATI sends webhook data differently
-    const message = req.body;
+    const entry = req.body.entry?.[0];
+    console.log("Entry:", JSON.stringify(entry, null, 2));
 
-    if (!message || !message.whatsappNumber) {
-      console.log("No valid message found in webhook");
+    const changes = entry?.changes?.[0]?.value;
+    console.log("Changes:", JSON.stringify(changes, null, 2));
+
+    const message = changes?.messages?.[0];
+    console.log("Message:", JSON.stringify(message, null, 2));
+
+    if (!message) {
+      console.log("❌ No message found in webhook");
       return res.sendStatus(200);
     }
 
     const { msg, msgLower, from, messageId } = extractMessageContent(message);
+    console.log("📝 Extracted content:", { msg, msgLower, from, messageId });
 
     // Find or create booking
     let booking = await Booking.findOne({ phone: from });
 
     console.log(
-      `Processing message from ${from}: ${msg} (step: ${booking?.step || "none"})`,
+      `📱 Processing message from ${from}: "${msg}" (step: ${booking?.step || "none"})`,
     );
 
     if (!booking) {
+      console.log("🆕 Creating new booking record");
       booking = new Booking({ phone: from, step: "welcome", meta: {} });
       await booking.save();
-      console.log("Created new booking record:", booking._id?.toString());
+      console.log("✅ Created booking:", booking._id?.toString());
+
+      console.log("📤 Sending welcome message to:", from);
       await sendWelcomeMessage(from);
       return res.sendStatus(200);
     }
 
     // Check for duplicate messages
     if (isDuplicateMessage(booking, messageId)) {
-      console.log("Duplicate webhook ignored", messageId);
+      console.log("⚠️ Duplicate webhook ignored:", messageId);
       return res.sendStatus(200);
     }
     await markMessageAsProcessed(booking, messageId);
 
-    // Route to appropriate handler (rest of your logic remains the same)
+    // Route to appropriate handler
+    console.log(`🔀 Routing message: "${msg}" at step: ${booking.step}`);
+
     if (["start", "hi", "hello"].includes(msgLower)) {
+      console.log("→ handleStartCommand");
       await handleStartCommand(from);
     } else if (["exit", "cancel"].includes(msgLower)) {
+      console.log("→ handleExitCommand");
       await handleExitCommand(from);
     } else if (msg.startsWith("action_")) {
+      console.log("→ handleWelcomeAction");
       await handleWelcomeAction(from, booking, msg);
     } else if (
       booking.step === "collecting_name" &&
@@ -898,18 +913,22 @@ router.post("/", async (req, res) => {
       !msg.startsWith("confirm_") &&
       !msg.startsWith("addslot_")
     ) {
+      console.log("→ handleNameCollection");
       await handleNameCollection(from, booking, msg);
     } else if (msg.startsWith("dt")) {
+      console.log("→ handleDateSelection");
       await handleDateSelection(from, booking, msg);
     } else if (
       msg.startsWith("period_") &&
       booking.step === "selecting_time_period"
     ) {
+      console.log("→ handleTimePeriodSelection");
       await handleTimePeriodSelection(from, booking, msg);
     } else if (
       msg.startsWith("period_") &&
       booking.step === "selecting_time_period_additional"
     ) {
+      console.log("→ handleTimePeriodSelection (additional)");
       booking.step = "selecting_time_slot_additional";
       await booking.save();
       await handleTimePeriodSelection(from, booking, msg);
@@ -918,37 +937,44 @@ router.post("/", async (req, res) => {
       /^sl\d+$/.test(msg) &&
       booking.step === "selecting_time_slot"
     ) {
+      console.log("→ handleSlotSelection");
       await handleSlotSelection(from, booking, msg);
     } else if (
       msg.startsWith("sl") &&
       /^sl\d+$/.test(msg) &&
       booking.step === "selecting_time_slot_additional"
     ) {
+      console.log("→ handleAdditionalSlotSelection");
       await handleAdditionalSlotSelection(from, booking, msg);
     } else if (msg.startsWith("addslot_")) {
+      console.log("→ handleAdditionalSlotQuestion");
       await handleAdditionalSlotQuestion(from, booking, msg);
     } else if (msg.startsWith("addon_")) {
+      console.log("→ handleAddonSelection");
       await handleAddonSelection(from, booking, msg);
     } else if (msg.startsWith("confirm_")) {
+      console.log("→ handleBookingConfirmation");
       await handleBookingConfirmation(from, booking, msg);
     } else {
-      console.log(`Unrecognized input: "${msg}" (step: ${booking.step})`);
+      console.log(`❓ Unrecognized input: "${msg}" (step: ${booking.step})`);
       await sendMessage(
         from,
         "I didn't understand that. Type 'start' to begin or 'help' for assistance.",
       );
     }
 
+    console.log("✅ Message processed successfully");
     return res.sendStatus(200);
   } catch (error) {
-    console.error("Webhook Error:", {
+    console.error("❌ Webhook Error:", {
       message: error.message,
       stack: error.stack,
       requestBody: req.body,
     });
 
     try {
-      const from = req.body?.whatsappNumber || req.body?.from;
+      const from =
+        req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from;
       if (from) {
         await sendMessage(
           from,
@@ -965,7 +991,6 @@ router.post("/", async (req, res) => {
     });
   }
 });
-
 // Webhook verification (WATI doesn't use this, but keep for compatibility)
 router.get("/", (req, res) => {
   res.status(200).send("WATI webhook endpoint active");

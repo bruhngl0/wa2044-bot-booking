@@ -24,24 +24,23 @@ const watiRequest = async (endpoint, data) => {
 // Send simple text message
 export const sendMessage = async (to, text) => {
   return await watiRequest("/api/v1/sendSessionMessage", {
-    whatsappNumber: to,
-    text: text,
+    whatsappNumber: to.replace(/\D/g, ""), // Remove any non-digits
+    messageText: text,
   });
 };
 
 // Send message with buttons
 export const sendButtonsMessage = async (to, bodyText, buttons) => {
-  // WATI uses listItems format for buttons
-  const listItems = buttons.map((btn) => ({
-    title: btn.title,
-    id: btn.id,
+  // WATI requires specific format for buttons
+  const buttonData = buttons.map((btn, idx) => ({
+    text: btn.title,
   }));
 
   return await watiRequest("/api/v1/sendInteractiveButtonsMessage", {
-    whatsappNumber: to,
-    callbackData: "button_response",
+    whatsappNumber: to.replace(/\D/g, ""),
+    callbackData: JSON.stringify(buttons.map((b) => b.id)),
     bodyText: bodyText,
-    listItems: listItems,
+    buttons: buttonData,
   });
 };
 
@@ -50,12 +49,11 @@ export const sendListMessage = async (to, headerText, sections) => {
   // Transform sections to WATI format
   const listItems = sections[0].rows.map((row) => ({
     title: row.title,
-    description: row.description,
-    id: row.id,
+    description: row.description || "",
   }));
 
   return await watiRequest("/api/v1/sendInteractiveListMessage", {
-    whatsappNumber: to,
+    whatsappNumber: to.replace(/\D/g, ""),
     header: headerText,
     body: sections[0].title || "Please select an option",
     buttonText: "View Options",
@@ -67,12 +65,11 @@ export const sendListMessage = async (to, headerText, sections) => {
 export const sendListMessageOne = async (to, bodyText, sections) => {
   const listItems = sections[0].rows.map((row) => ({
     title: row.title,
-    description: row.description,
-    id: row.id,
+    description: row.description || "",
   }));
 
   return await watiRequest("/api/v1/sendInteractiveListMessage", {
-    whatsappNumber: to,
+    whatsappNumber: to.replace(/\D/g, ""),
     body: bodyText,
     buttonText: "Select",
     listItems: listItems,
@@ -85,7 +82,6 @@ export const sendUrlButtonMessage = async (to, bodyText, url, buttonText) => {
   const message = `${bodyText}\n\n👉 ${buttonText}: ${url}`;
   return await sendMessage(to, message);
 };
-
 /* utils/whatsapp.js
 import axios from "axios";
 import dotenv from "dotenv";
