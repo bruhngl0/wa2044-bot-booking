@@ -85,6 +85,28 @@ const extractMessageContent = (message) => {
   };
 };
 
+/*const extractMessageContent = (message) => {
+  const interactive = message?.interactive || {};
+  const buttonReply = interactive?.button_reply || null;
+  const listReply = interactive?.list_reply || null;
+  const incomingText = message.text?.body?.trim() || "";
+
+  const msgRaw =
+    listReply?.id ||
+    buttonReply?.id ||
+    listReply?.title ||
+    buttonReply?.title ||
+    incomingText ||
+    "";
+
+  return {
+    msg: String(msgRaw).trim(),
+    msgLower: String(msgRaw).trim().toLowerCase(),
+    from: message.from,
+    messageId: message?.id,
+  };
+}; */
+
 const isDuplicateMessage = (booking, messageId) => {
   if (!messageId || !booking.meta) return false;
   return booking.meta.lastMessageId === messageId;
@@ -808,7 +830,7 @@ const handleExitCommand = async (from) => {
 // WEBHOOK ENDPOINTS
 // ============================================================================
 
-router.get("/", (req, res) => {
+/*router.get("/", (req, res) => {
   const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
@@ -820,18 +842,18 @@ router.get("/", (req, res) => {
   }
   console.error("Webhook verification failed");
   res.sendStatus(403);
-});
+}); */
 
 router.post("/", async (req, res) => {
-  console.log("=== NEW WEBHOOK REQUEST ===");
+  console.log("=== NEW WATI WEBHOOK REQUEST ===");
+  console.log("Webhook body:", JSON.stringify(req.body, null, 2));
 
   try {
-    const entry = req.body.entry?.[0];
-    const changes = entry?.changes?.[0]?.value;
-    const message = changes?.messages?.[0];
+    // WATI sends webhook data differently
+    const message = req.body;
 
-    if (!message) {
-      console.log("No message found in webhook");
+    if (!message || !message.whatsappNumber) {
+      console.log("No valid message found in webhook");
       return res.sendStatus(200);
     }
 
@@ -843,6 +865,7 @@ router.post("/", async (req, res) => {
     console.log(
       `Processing message from ${from}: ${msg} (step: ${booking?.step || "none"})`,
     );
+
     if (!booking) {
       booking = new Booking({ phone: from, step: "welcome", meta: {} });
       await booking.save();
@@ -858,7 +881,7 @@ router.post("/", async (req, res) => {
     }
     await markMessageAsProcessed(booking, messageId);
 
-    // Route to appropriate handler
+    // Route to appropriate handler (rest of your logic remains the same)
     if (["start", "hi", "hello"].includes(msgLower)) {
       await handleStartCommand(from);
     } else if (["exit", "cancel"].includes(msgLower)) {
@@ -887,7 +910,6 @@ router.post("/", async (req, res) => {
       msg.startsWith("period_") &&
       booking.step === "selecting_time_period_additional"
     ) {
-      // Reuse same handler but set flag for additional slot
       booking.step = "selecting_time_slot_additional";
       await booking.save();
       await handleTimePeriodSelection(from, booking, msg);
@@ -926,8 +948,7 @@ router.post("/", async (req, res) => {
     });
 
     try {
-      const from =
-        req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from;
+      const from = req.body?.whatsappNumber || req.body?.from;
       if (from) {
         await sendMessage(
           from,
@@ -945,4 +966,8 @@ router.post("/", async (req, res) => {
   }
 });
 
+// Webhook verification (WATI doesn't use this, but keep for compatibility)
+router.get("/", (req, res) => {
+  res.status(200).send("WATI webhook endpoint active");
+});
 export default router;
