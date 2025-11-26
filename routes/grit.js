@@ -85,6 +85,26 @@ const extractMessageContent = (message) => {
     messageId: message?.id,
   };
 };
+
+const isWatiEventPayload = (body = {}) => {
+  return Boolean(body.eventType && body.waId);
+};
+
+const buildMessageFromWatiEvent = (payload = {}) => {
+  return {
+    from: payload.waId,
+    id:
+      payload.whatsappMessageId ||
+      payload.id ||
+      payload.conversationId ||
+      payload.ticketId ||
+      undefined,
+    text: {
+      body: typeof payload.text === "string" ? payload.text : "",
+    },
+    interactive: payload.interactive || null,
+  };
+};
 /*const extractMessageContent = (message) => {
   const interactive = message?.interactive || {};
   const buttonReply = interactive?.button_reply || null;
@@ -858,21 +878,41 @@ router.post("/", async (req, res) => {
     let entry = null;
     let changes = null;
 
-    // Try WhatsApp Cloud API format first (entry.changes.value.messages)
-    entry = req.body.entry?.[0];
-    changes = entry?.changes?.[0]?.value;
-    message = changes?.messages?.[0];
+    if (isWatiEventPayload(req.body)) {
+      if (req.body.owner) {
+        console.log(
+          `Ignoring owner eventType ${req.body.eventType} for waId ${req.body.waId}`,
+        );
+        return res.sendStatus(200);
+      }
+      message = buildMessageFromWatiEvent(req.body);
+      console.log(
+        "Processed WATI eventType payload into message:",
+        JSON.stringify(message, null, 2),
+      );
+    } else {
+      // Try WhatsApp Cloud API format first (entry.changes.value.messages)
+      entry = req.body.entry?.[0];
+      changes = entry?.changes?.[0]?.value;
+      message = changes?.messages?.[0];
 
-    // If not found, try direct WATI format (req.body.message or req.body)
-    if (!message) {
-      message = req.body.message || req.body;
-      console.log("Trying direct WATI format, message:", JSON.stringify(message, null, 2));
-    }
+      // If not found, try direct WATI format (req.body.message or req.body)
+      if (!message) {
+        message = req.body.message || req.body;
+        console.log(
+          "Trying direct WATI format, message:",
+          JSON.stringify(message, null, 2),
+        );
+      }
 
-    // If still not found, try nested structure
-    if (!message && req.body.data) {
-      message = req.body.data.message || req.body.data;
-      console.log("Trying data.message format, message:", JSON.stringify(message, null, 2));
+      // If still not found, try nested structure
+      if (!message && req.body.data) {
+        message = req.body.data.message || req.body.data;
+        console.log(
+          "Trying data.message format, message:",
+          JSON.stringify(message, null, 2),
+        );
+      }
     }
 
     if (!message) {
@@ -882,6 +922,10 @@ router.post("/", async (req, res) => {
     }
 
     const { msg, msgLower, from, messageId } = extractMessageContent(message);
+    if (!from) {
+      console.warn("No sender (from) detected in message payload. Ignoring.");
+      return res.sendStatus(200);
+    }
 
     // Find or create booking
     let booking = await Booking.findOne({ phone: from });
