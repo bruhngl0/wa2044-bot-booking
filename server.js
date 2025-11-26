@@ -45,14 +45,29 @@ app.use(
 // support urlencoded payloads
 app.use(express.urlencoded({ extended: true }));
 
+// Request logging middleware - logs all incoming requests
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${req.method} ${req.path}`);
+  console.log("Headers:", JSON.stringify(req.headers, null, 2));
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log("Body:", JSON.stringify(req.body, null, 2));
+  }
+  if (req.query && Object.keys(req.query).length > 0) {
+    console.log("Query:", JSON.stringify(req.query, null, 2));
+  }
+  next();
+});
+
 // Basic health
 app.get("/", (req, res) => res.send("Booking bot running"));
 
-// Mount WhatsApp routes (if present)
-if (whatsappRoutes) {
+// Mount WhatsApp routes - using grit.js for WATI compatibility
+if (grit) {
   app.use("/whatsapp", grit);
+  console.log("✅ Mounted /whatsapp routes (WATI)");
 } else {
-  console.warn("⚠️ whatsappRoutes not found - /whatsapp not mounted");
+  console.warn("⚠️ grit route not found - /whatsapp not mounted");
 }
 
 // Mount Razorpay webhook router at /razorpay (router defines /webhook)

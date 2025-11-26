@@ -846,16 +846,38 @@ router.get("/", (req, res) => {
 
 router.post("/", async (req, res) => {
   console.log("=== NEW WATI WEBHOOK REQUEST ===");
+  console.log("Request method:", req.method);
+  console.log("Request path:", req.path);
+  console.log("Request headers:", JSON.stringify(req.headers, null, 2));
   console.log("Webhook body:", JSON.stringify(req.body, null, 2));
+  console.log("Query params:", JSON.stringify(req.query, null, 2));
 
   try {
-    // WATI uses similar structure to WhatsApp Cloud API
-    const entry = req.body.entry?.[0];
-    const changes = entry?.changes?.[0]?.value;
-    const message = changes?.messages?.[0];
+    // WATI webhook format - try multiple possible structures
+    let message = null;
+    let entry = null;
+    let changes = null;
+
+    // Try WhatsApp Cloud API format first (entry.changes.value.messages)
+    entry = req.body.entry?.[0];
+    changes = entry?.changes?.[0]?.value;
+    message = changes?.messages?.[0];
+
+    // If not found, try direct WATI format (req.body.message or req.body)
+    if (!message) {
+      message = req.body.message || req.body;
+      console.log("Trying direct WATI format, message:", JSON.stringify(message, null, 2));
+    }
+
+    // If still not found, try nested structure
+    if (!message && req.body.data) {
+      message = req.body.data.message || req.body.data;
+      console.log("Trying data.message format, message:", JSON.stringify(message, null, 2));
+    }
 
     if (!message) {
-      console.log("No message found in webhook");
+      console.log("⚠️ No message found in webhook - possible format mismatch");
+      console.log("Full request body structure:", Object.keys(req.body));
       return res.sendStatus(200);
     }
 
@@ -950,8 +972,18 @@ router.post("/", async (req, res) => {
     });
 
     try {
-      const from =
-        req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from;
+      // Try to extract 'from' from multiple possible webhook formats
+      let from = req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from;
+      if (!from && req.body?.message) {
+        from = req.body.message.from;
+      }
+      if (!from && req.body?.data?.message) {
+        from = req.body.data.message.from;
+      }
+      if (!from && req.body?.from) {
+        from = req.body.from;
+      }
+      
       if (from) {
         await sendMessage(
           from,
@@ -967,11 +999,6 @@ router.post("/", async (req, res) => {
       message: error.message,
     });
   }
-});
-
-// Webhook verification (WATI doesn't use this, but keep for compatibility)
-router.get("/", (req, res) => {
-  res.status(200).send("WATI webhook endpoint active");
 });
 
 export default router;
