@@ -992,7 +992,4 @@ router.post("/", async (req, res) => {
   }
 });
 // Webhook verification (WATI doesn't use this, but keep for compatibility)
-router.get("/", (req, res) => {
-  res.status(200).send("WATI webhook endpoint active");
-});
 export default router;
