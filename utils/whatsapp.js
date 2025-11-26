@@ -12,7 +12,7 @@ const watiRequest = async (path, data, queryParams = {}) => {
   // 1. Build the base URL
   let url = `${WATI_API_ENDPOINT}${path}`;
 
-  // 2. Append query parameters (WATI often uses query params for the number)
+  // 2. Append query parameters (WATI often uses query params for the number) lol new deployment fix
   const params = new URLSearchParams(queryParams);
   if (cleanTo && !params.get("whatsappNumber")) {
     params.set("whatsappNumber", cleanTo);
