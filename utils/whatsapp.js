@@ -5,81 +5,137 @@ dotenv.config();
 const WATI_API_ENDPOINT = process.env.WATI_API_ENDPOINT;
 const WATI_ACCESS_TOKEN = process.env.WATI_ACCESS_TOKEN;
 
-// Helper to make WATI API calls
-const watiRequest = async (endpoint, data) => {
+// --- API Helper Function (Adjusted to allow dynamic URL construction) ---
+const watiRequest = async (path, data, queryParams = {}) => {
+  const cleanTo = data?.whatsappNumber?.replace(/\D/g, "") || "";
+
+  // 1. Build the base URL
+  let url = `${WATI_API_ENDPOINT}${path}`;
+
+  // 2. Append query parameters (WATI often uses query params for the number)
+  const params = new URLSearchParams(queryParams);
+  if (cleanTo && !params.get("whatsappNumber")) {
+    params.set("whatsappNumber", cleanTo);
+  }
+
+  if (params.toString()) {
+    url += `?${params.toString()}`;
+  }
+
+  // 3. Determine the body to send (exclude number and path-specific params if in query)
+  const bodyData = { ...data };
+  if (bodyData.whatsappNumber) delete bodyData.whatsappNumber; // Number is in query
+
+  // Check if body is empty, if so, send null (like in your testSendMessage)
+  const finalBody = Object.keys(bodyData).length > 0 ? bodyData : null;
+
   try {
-    const response = await axios.post(`${WATI_API_ENDPOINT}${endpoint}`, data, {
+    const response = await axios.post(url, finalBody, {
       headers: {
+        // IMPORTANT: Your test file's button/list API didn't use 'Authorization: Bearer...'
+        // It only used the raw token in the header. We'll stick to that.
         Authorization: WATI_ACCESS_TOKEN,
         "Content-Type": "application/json",
       },
     });
     return response.data;
   } catch (error) {
-    console.error("WATI API Error:", error.response?.data || error.message);
+    console.error(
+      "WATI API Error:",
+      error.response?.status,
+      error.response?.statusText,
+    );
+    console.error(
+      "Response data:",
+      JSON.stringify(error.response?.data, null, 2),
+    );
     throw error;
   }
 };
 
-// Send simple text message
+//==========================================================================================================
+
+// --- API Functions (Modified to match test file structure) ---
+
+// 1. Send simple text message (Matches Test 1 using query parameters for number and text)
 export const sendMessage = async (to, text) => {
-  return await watiRequest("/api/v1/sendSessionMessage", {
-    whatsappNumber: to.replace(/\D/g, ""), // Remove any non-digits
-    messageText: text,
-  });
+  const cleanTo = to.replace(/\D/g, "");
+  // URL structure from test: ".../sendSessionMessage/919682672622?messageText=hey"
+  // Since WATI_API_ENDPOINT includes the account ID, we use the specific path structure.
+  // NOTE: This assumes your WATI_API_ENDPOINT is just the base URL, not including the account ID.
+  // If WATI_API_ENDPOINT is 'https://live-mt-server.wati.io/1051702', this works.
+
+  const path = `/api/v1/sendSessionMessage/${cleanTo}`;
+
+  // The body is null, and text is passed via query parameter.
+  return await watiRequest(path, null, { messageText: text });
 };
 
-// Send message with buttons
+//=============================================================================================================================
+
+// 2. Send message with buttons (Matches Test 2, uses query param for number and body for content)
 export const sendButtonsMessage = async (to, bodyText, buttons) => {
-  // WATI requires specific format for buttons
-  const buttonData = buttons.map((btn, idx) => ({
+  const cleanTo = to.replace(/\D/g, ""); // WATI buttons require a 'text' field for the label
+  const buttonData = buttons.map((btn) => ({
     text: btn.title,
   }));
 
-  return await watiRequest("/api/v1/sendInteractiveButtonsMessage", {
-    whatsappNumber: to.replace(/\D/g, ""),
-    callbackData: JSON.stringify(buttons.map((b) => b.id)),
+  const payload = {
+    whatsappNumber: cleanTo, // Included in body for the watiRequest helper to extract
     bodyText: bodyText,
     buttons: buttonData,
-  });
+  }; // URL structure from test: ".../sendInteractiveButtonsMessage?whatsappNumber=919682672622"
+
+  return await watiRequest("/api/v1/sendInteractiveButtonsMessage", payload);
 };
 
-// Send list message (single section)
+//=========================================================================================================================
+
+// 3. Send list message (Matches Test 3, uses query param for number and body for content)
 export const sendListMessage = async (to, headerText, sections) => {
-  // Transform sections to WATI format
+  const cleanTo = to.replace(/\D/g, ""); // Transform sections to WATI listItems
   const listItems = sections[0].rows.map((row) => ({
     title: row.title,
     description: row.description || "",
-  }));
-
-  return await watiRequest("/api/v1/sendInteractiveListMessage", {
-    whatsappNumber: to.replace(/\D/g, ""),
+  })); // The body of the message will be the section title/bodyText from the route.
+  const bodyText = sections[0].title || "Please select an option";
+  const payload = {
+    whatsappNumber: cleanTo, // Included in body for the watiRequest helper to extract
     header: headerText,
-    body: sections[0].title || "Please select an option",
+    body: bodyText,
     buttonText: "View Options",
     listItems: listItems,
-  });
+  }; // URL structure from test: ".../sendInteractiveListMessage?whatsappNumber=919682672622"
+  return await watiRequest("/api/v1/sendInteractiveListMessage", payload);
 };
+
+//=======================================================================================================================
 
 // Send list message (alternative format for single item selection)
 export const sendListMessageOne = async (to, bodyText, sections) => {
+  const cleanTo = to.replace(/\D/g, "");
   const listItems = sections[0].rows.map((row) => ({
     title: row.title,
     description: row.description || "",
   }));
 
-  return await watiRequest("/api/v1/sendInteractiveListMessage", {
-    whatsappNumber: to.replace(/\D/g, ""),
+  const payload = {
+    whatsappNumber: cleanTo,
+    header: sections[0].title || "Select Option", // Using section title as list header
     body: bodyText,
     buttonText: "Select",
     listItems: listItems,
-  });
+  };
+
+  return await watiRequest("/api/v1/sendInteractiveListMessage", payload);
 };
 
-// Send URL button message
+//================================================================================================================================
+
+// Send URL button message (WATI doesn't have native URL buttons, sticking to text + link)
 export const sendUrlButtonMessage = async (to, bodyText, url, buttonText) => {
-  // WATI doesn't have native URL buttons, so we send text with link
-  const message = `${bodyText}\n\n👉 ${buttonText}: ${url}`;
+  // This function still relies on the 'sendMessage' function
+  const message = `${bodyText}\n\n👉 *${buttonText}*: ${url}`;
   return await sendMessage(to, message);
 };
 /* utils/whatsapp.js

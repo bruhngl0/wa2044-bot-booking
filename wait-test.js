@@ -4,7 +4,7 @@ dotenv.config();
 
 const WATI_API_ENDPOINT = process.env.WATI_API_ENDPOINT;
 const WATI_ACCESS_TOKEN = process.env.WATI_ACCESS_TOKEN;
-const TEST_NUMBER = process.env.TEST_NUMBER || "919682672622";
+const TEST_NUMBER = "919682672622";
 
 console.log("🔧 Testing WATI API Configuration");
 console.log("Endpoint:", WATI_API_ENDPOINT);
