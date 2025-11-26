@@ -842,7 +842,7 @@ router.get("/", (req, res) => {
   }
   console.error("Webhook verification failed");
   res.sendStatus(403);
-}); */
+});
 
 router.post("/", async (req, res) => {
   console.log("=== NEW WATI WEBHOOK REQUEST ===");
