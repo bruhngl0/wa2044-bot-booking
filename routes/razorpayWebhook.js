@@ -1,3 +1,4 @@
+import "../config/loadEnv.js";
 import express from "express";
 import crypto from "crypto";
 import axios from "axios";

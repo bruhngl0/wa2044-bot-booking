@@ -1,7 +1,6 @@
 // FILE: server.js
+import "./config/loadEnv.js";
 import express from "express";
-import dotenv from "dotenv";
-dotenv.config();
 
 const getEnv = (key, defaultValue = "") => {
   return (process.env[key] || defaultValue).trim();

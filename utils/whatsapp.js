@@ -21,6 +21,9 @@ if (!BASE_URL || !ACCESS_TOKEN) {
   process.exit(1);
 }
 
+console.log(BASE_URL);
+console.log(ACCESS_TOKEN);
+
 // ================================================
 // UNIVERSAL WATI REQUEST HANDLER
 // ================================================
@@ -157,6 +160,7 @@ export default {
   sendListMessage,
   sendListMessageOne,
 };
+
 /* import axios from "axios";
 import dotenv from "dotenv";
 dotenv.config();

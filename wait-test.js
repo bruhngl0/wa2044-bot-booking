@@ -1,6 +1,5 @@
+import "./config/loadEnv.js";
 import axios from "axios";
-import dotenv from "dotenv";
-dotenv.config();
 
 const WATI_API_ENDPOINT = process.env.WATI_API_ENDPOINT;
 const WATI_ACCESS_TOKEN = process.env.WATI_ACCESS_TOKEN;

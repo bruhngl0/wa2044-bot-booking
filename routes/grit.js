@@ -1,3 +1,4 @@
+import "../config/loadEnv.js";
 import express from "express";
 import Booking from "../models/Booking.js";
 import {
@@ -12,8 +13,6 @@ import {
   createEvent,
 } from "../utils/googleCalendar.js";
 import { createPaymentLink } from "../utils/payments.js";
-import dotenv from "dotenv";
-dotenv.config();
 
 const router = express.Router();
 
