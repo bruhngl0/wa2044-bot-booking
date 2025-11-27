@@ -1,15 +1,14 @@
 // FILE: server.js
-import "./config/loadEnv.js";
 import express from "express";
+import dotenv from "dotenv";
+dotenv.config();
 
 const getEnv = (key, defaultValue = "") => {
   return (process.env[key] || defaultValue).trim();
 };
 
 import mongoose from "mongoose";
-import whatsappRoutes from "./routes/whatsapp.js";
 import grit from "./routes/grit.js";
-import watiTestRoutes from "./routes/watiTest.js";
 import razorpayWebhookRoutes from "./routes/razorpayWebhook.js";
 
 const app = express();
@@ -63,18 +62,9 @@ app.use((req, res, next) => {
 app.get("/", (req, res) => res.send("Booking bot running"));
 
 // Mount WhatsApp routes - allow swapping to simple test router via env
-const useWatiTestRoutes =
-  (process.env.WATI_TEST_MODE || "").toLowerCase() === "true";
-const activeWhatsappRouter = useWatiTestRoutes ? watiTestRoutes : grit;
 
-if (activeWhatsappRouter) {
-  app.use("/whatsapp", activeWhatsappRouter);
-  console.log(
-    `✅ Mounted /whatsapp routes (${useWatiTestRoutes ? "TEST" : "WATI"})`,
-  );
-} else {
-  console.warn("⚠️ Whatsapp router not found - /whatsapp not mounted");
-}
+app.use("/whatsapp", grit);
+console.log(`✅ Mounted /whatsapp routes WATI-grit"})`);
 
 // Mount Razorpay webhook router at /razorpay (router defines /webhook)
 if (razorpayWebhookRoutes) {
