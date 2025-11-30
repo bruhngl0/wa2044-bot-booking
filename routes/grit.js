@@ -421,7 +421,6 @@ const handleTimePeriodSelection = async (from, booking, msg) => {
 
   if (msg.match(/^\d+-\d+$/)) {
     const [sectionIndex, rowIndex] = msg.split("-").map(Number);
-    // Map row index to period name
     const periodMap = {
       0: "morning",
       1: "midday",
@@ -448,11 +447,13 @@ const handleTimePeriodSelection = async (from, booking, msg) => {
   booking.meta.selectedPeriod = period;
   booking.step = "selecting_time_slot";
   booking.markModified("meta");
-  await booking.save();
+  await booking.save(); // ← Make sure this is HERE before any await below
+
+  console.log(`✅ Step saved as: ${booking.step}`); // ← ADD THIS DEBUG LOG
 
   const timePeriod = TIME_PERIODS[period];
-
   let availableSlotStrings = [];
+
   try {
     availableSlotStrings = await getAvailableSlotsForDate(selectedDate);
   } catch (error) {
@@ -463,7 +464,6 @@ const handleTimePeriodSelection = async (from, booking, msg) => {
     );
   }
 
-  // Filter slots for this period (or use fallback slots directly)
   const periodSlots =
     availableSlotStrings.length === 9
       ? availableSlotStrings.map((s) => ({ formatted: s }))
@@ -496,7 +496,9 @@ const handleTimePeriodSelection = async (from, booking, msg) => {
     return acc;
   }, {});
   booking.markModified("meta");
-  await booking.save();
+  await booking.save(); // ← Save again after adding slotMapping
+
+  console.log(`✅ SlotMapping saved:`, Object.keys(booking.meta.slotMapping)); // ← ADD DEBUG LOG
 
   await sendListMessage(from, "Select Time Slot", [
     {
@@ -505,6 +507,9 @@ const handleTimePeriodSelection = async (from, booking, msg) => {
     },
   ]);
 };
+
+//===============================================================================================================================
+
 const handleSlotSelection = async (from, booking, msg) => {
   const timeRange = booking.meta?.slotMapping?.[msg];
   const date = booking.meta?.selectedDate;
@@ -585,7 +590,6 @@ const handleAdditionalSlotQuestion = async (from, booking, msg) => {
         ],
       },
     ]);
-    //    ===================================================================================================================
   } else {
     // Proceed to addons
     booking.step = "selecting_addons";
@@ -1008,61 +1012,86 @@ router.post("/", async (req, res) => {
     }
     await markMessageAsProcessed(booking, messageId);
 
-    // Route to appropriate handler (rest of your logic remains the same)
+    // ========================================================================
+    // ROUTING LOGIC - ORDER MATTERS! Most specific checks come first
+    // ========================================================================
+
     if (["start", "hi", "hello"].includes(msgLower)) {
       await handleStartCommand(from);
     } else if (["exit", "cancel"].includes(msgLower)) {
       await handleExitCommand(from);
-    } else if (msg === "1" || msg === "2") {
+    } else if ((msg === "1" || msg === "2") && booking.step === "welcome") {
       await handleWelcomeAction(from, booking, msg);
     } else if (
       booking.step === "collecting_name" &&
-      !msg.startsWith("action_") &&
-      !msg.startsWith("dt") &&
+      !msg.match(/^\d+$/) &&
+      !msg.match(/^\d+-\d+$/) &&
       !msg.startsWith("period_") &&
-      !msg.startsWith("sl") &&
-      !msg.startsWith("addon_") &&
-      !msg.startsWith("confirm_") &&
-      !msg.startsWith("addslot_")
+      !msg.startsWith("addon_")
     ) {
       await handleNameCollection(from, booking, msg);
-    } else if (
-      msg.startsWith("dt") ||
-      (msg.match(/^\d+-\d+$/) && booking.step === "selecting_date")
+    }
+    // ← SLOT SELECTION CHECKS MUST COME BEFORE DATE SELECTION
+    // Because both accept \d+-\d+$ format, we need to check step explicitly
+    else if (
+      (msg.startsWith("sl") || msg.match(/^\d+-\d+$/)) &&
+      booking.step === "selecting_time_slot"
     ) {
-      await handleDateSelection(from, booking, msg);
+      console.log(`Routing to handleSlotSelection for step: ${booking.step}`);
+      await handleSlotSelection(from, booking, msg);
     } else if (
-      (msg.startsWith("period_") ||
-        (msg.match(/^\d+-\d+$/) && booking.step === "selecting_time_period")) &&
+      (msg.startsWith("sl") || msg.match(/^\d+-\d+$/)) &&
+      booking.step === "selecting_time_slot_additional"
+    ) {
+      console.log(
+        `Routing to handleAdditionalSlotSelection for step: ${booking.step}`,
+      );
+      await handleAdditionalSlotSelection(from, booking, msg);
+    }
+    // ← DATE SELECTION - Now comes after slot selection
+    else if (
+      (msg.startsWith("dt") || msg.match(/^\d+-\d+$/)) &&
+      booking.step === "selecting_date"
+    ) {
+      console.log(`Routing to handleDateSelection for step: ${booking.step}`);
+      await handleDateSelection(from, booking, msg);
+    }
+    // ← TIME PERIOD SELECTION
+    else if (
+      (msg.startsWith("period_") || msg.match(/^\d+-\d+$/)) &&
       booking.step === "selecting_time_period"
     ) {
+      console.log(
+        `Routing to handleTimePeriodSelection for step: ${booking.step}`,
+      );
       await handleTimePeriodSelection(from, booking, msg);
     } else if (
-      msg.startsWith("period_") &&
+      (msg.startsWith("period_") || msg.match(/^\d+-\d+$/)) &&
       booking.step === "selecting_time_period_additional"
     ) {
+      console.log(
+        `Routing to handleTimePeriodSelection (additional) for step: ${booking.step}`,
+      );
       booking.step = "selecting_time_slot_additional";
       await booking.save();
       await handleTimePeriodSelection(from, booking, msg);
     } else if (
-      (msg.startsWith("sl") && /^sl\d+$/.test(msg)) ||
-      (msg.match(/^\d+-\d+$/) && booking.step === "selecting_time_slot")
+      msg.startsWith("addslot_") &&
+      booking.step === "asking_additional_slot"
     ) {
-      await handleSlotSelection(from, booking, msg);
-    } else if (
-      (msg.startsWith("sl") && /^sl\d+$/.test(msg)) ||
-      (msg.match(/^\d+-\d+$/) &&
-        booking.step === "selecting_time_slot_additional")
-    ) {
-      await handleAdditionalSlotSelection(from, booking, msg);
-    } else if (msg.startsWith("addslot_")) {
       await handleAdditionalSlotQuestion(from, booking, msg);
-    } else if (msg.startsWith("addon_")) {
+    } else if (
+      (msg.startsWith("addon_") || msg.match(/^\d+-\d+$/)) &&
+      booking.step === "selecting_addons"
+    ) {
       await handleAddonSelection(from, booking, msg);
-    } else if (msg.startsWith("confirm_")) {
+    } else if (
+      msg.startsWith("confirm_") &&
+      booking.step === "confirming_booking"
+    ) {
       await handleBookingConfirmation(from, booking, msg);
     } else {
-      console.log(`Unrecognized input: "${msg}" (step: ${booking.step})`);
+      console.log(`❌ Unrecognized input: "${msg}" (step: ${booking.step})`);
       await sendMessage(
         from,
         "I didn't understand that. Type 'start' to begin or 'help' for assistance.",
@@ -1088,6 +1117,9 @@ router.post("/", async (req, res) => {
       }
       if (!from && req.body?.from) {
         from = req.body.from;
+      }
+      if (!from && req.body?.waId) {
+        from = req.body.waId;
       }
 
       if (from) {
