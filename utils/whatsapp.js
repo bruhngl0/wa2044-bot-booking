@@ -27,6 +27,9 @@ console.log(ACCESS_TOKEN);
 // ================================================
 // UNIVERSAL WATI REQUEST HANDLER
 // ================================================
+// ================================================
+// UNIVERSAL WATI REQUEST HANDLER
+// ================================================
 const watiRequest = async (path, bodyData = null, queryParams = {}) => {
   try {
     // Build the full URL
@@ -54,7 +57,32 @@ const watiRequest = async (path, bodyData = null, queryParams = {}) => {
       timeout: 15000,
     });
 
-    console.log("✅ WATI Response:", response.status);
+    // ADD THESE DETAILED LOGS HERE 👇
+    console.log("✅ WATI Response Status:", response.status);
+    console.log(
+      "✅ WATI Response Headers:",
+      JSON.stringify(response.headers, null, 2),
+    );
+    console.log(
+      "✅ WATI Response Data:",
+      JSON.stringify(response.data, null, 2),
+    );
+
+    // Log specifically what WATI says about the message
+    if (response.data) {
+      console.log(
+        "📱 Message Status:",
+        response.data.result || response.data.status || "Unknown",
+      );
+      console.log(
+        "📱 Message ID:",
+        response.data.messageId || response.data.id || "No ID returned",
+      );
+      if (response.data.error) {
+        console.log("⚠️ WATI Error in response:", response.data.error);
+      }
+    }
+
     return response.data;
   } catch (error) {
     console.error("❌ WATI API Error:");
@@ -62,10 +90,18 @@ const watiRequest = async (path, bodyData = null, queryParams = {}) => {
     console.error("  StatusText:", error.response?.statusText);
     console.error("  Data:", JSON.stringify(error.response?.data, null, 2));
     console.error("  Message:", error.message);
+
+    // ADD THIS: Log full error response
+    if (error.response) {
+      console.error(
+        "  Full Error Response:",
+        JSON.stringify(error.response, null, 2),
+      );
+    }
+
     throw error;
   }
 };
-
 // ================================================
 // 1. SEND TEXT MESSAGE
 // URL format: /api/v1/sendSessionMessage/NUMBER?messageText=TEXT
