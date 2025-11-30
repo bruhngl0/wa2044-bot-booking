@@ -119,24 +119,30 @@ export const sendMessage = async (to, text) => {
 // URL format: /api/v1/sendInteractiveButtonsMessage?whatsappNumber=NUMBER
 // Body: { bodyText, buttons }
 // ================================================
+// ================================================
+// 2. SEND BUTTON MESSAGE
+// URL format: /api/v1/sendInteractiveButtonsMessage?whatsappNumber=NUMBER
+// Body: { bodyText, buttons }
+// ================================================
 export const sendButtonsMessage = async (to, bodyText, buttons) => {
   const cleanTo = to.replace(/\D/g, "");
 
   // Format buttons to match WATI schema
-  const formattedButtons = buttons.map((btn) => ({
+  const formattedButtons = buttons.map((btn, index) => ({
     text: btn.text || btn.title || btn,
+    // ADD THIS: If button has an ID, preserve it, otherwise generate one
+    id: btn.id || `btn_${index}`,
   }));
 
   const body = {
-    body: bodyText, // ← CHANGED: Use 'body' instead of 'bodyText'
+    body: bodyText,
     buttons: formattedButtons,
   };
 
   return await watiRequest(`/api/v1/sendInteractiveButtonsMessage`, body, {
     whatsappNumber: cleanTo,
   });
-};
-// ================================================
+}; // ================================================
 // 3. SEND LIST MESSAGE
 // URL format: /api/v1/sendInteractiveListMessage?whatsappNumber=NUMBER
 // Body: { header, body, buttonText, listItems }
