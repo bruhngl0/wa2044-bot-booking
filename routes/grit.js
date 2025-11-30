@@ -416,11 +416,32 @@ const handleDateSelection = async (from, booking, msg) => {
 };
 
 const handleTimePeriodSelection = async (from, booking, msg) => {
-  const period = msg.replace("period_", "");
+  // Handle WATI's transformed ID format "0-1" -> "period_midday"
+  let period = msg.replace("period_", "");
+
+  if (msg.match(/^\d+-\d+$/)) {
+    const [sectionIndex, rowIndex] = msg.split("-").map(Number);
+    // Map row index to period name
+    const periodMap = {
+      0: "morning",
+      1: "midday",
+      2: "afternoon",
+      3: "evening",
+    };
+    period = periodMap[rowIndex];
+    console.log(`Transformed WATI period ID ${msg} to ${period}`);
+  }
+
   const selectedDate = booking.meta.selectedDate;
 
   if (!selectedDate) {
     await sendSessionExpired(from);
+    return;
+  }
+
+  if (!period || !TIME_PERIODS[period]) {
+    console.log(`Invalid period: ${period} (from msg: ${msg})`);
+    await sendMessage(from, "Invalid time period selected.");
     return;
   }
 
@@ -430,10 +451,6 @@ const handleTimePeriodSelection = async (from, booking, msg) => {
   await booking.save();
 
   const timePeriod = TIME_PERIODS[period];
-  if (!timePeriod) {
-    await sendMessage(from, "Invalid time period selected.");
-    return;
-  }
 
   let availableSlotStrings = [];
   try {
@@ -488,7 +505,6 @@ const handleTimePeriodSelection = async (from, booking, msg) => {
     },
   ]);
 };
-
 const handleSlotSelection = async (from, booking, msg) => {
   const timeRange = booking.meta?.slotMapping?.[msg];
   const date = booking.meta?.selectedDate;
@@ -1016,7 +1032,8 @@ router.post("/", async (req, res) => {
     ) {
       await handleDateSelection(from, booking, msg);
     } else if (
-      msg.startsWith("period_") &&
+      (msg.startsWith("period_") ||
+        (msg.match(/^\d+-\d+$/) && booking.step === "selecting_time_period")) &&
       booking.step === "selecting_time_period"
     ) {
       await handleTimePeriodSelection(from, booking, msg);
