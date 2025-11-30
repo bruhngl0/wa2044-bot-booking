@@ -1010,7 +1010,10 @@ router.post("/", async (req, res) => {
       !msg.startsWith("addslot_")
     ) {
       await handleNameCollection(from, booking, msg);
-    } else if (msg.startsWith("dt")) {
+    } else if (
+      msg.startsWith("dt") ||
+      (msg.match(/^\d+-\d+$/) && booking.step === "selecting_date")
+    ) {
       await handleDateSelection(from, booking, msg);
     } else if (
       msg.startsWith("period_") &&
@@ -1025,15 +1028,14 @@ router.post("/", async (req, res) => {
       await booking.save();
       await handleTimePeriodSelection(from, booking, msg);
     } else if (
-      msg.startsWith("sl") &&
-      /^sl\d+$/.test(msg) &&
-      booking.step === "selecting_time_slot"
+      (msg.startsWith("sl") && /^sl\d+$/.test(msg)) ||
+      (msg.match(/^\d+-\d+$/) && booking.step === "selecting_time_slot")
     ) {
       await handleSlotSelection(from, booking, msg);
     } else if (
-      msg.startsWith("sl") &&
-      /^sl\d+$/.test(msg) &&
-      booking.step === "selecting_time_slot_additional"
+      (msg.startsWith("sl") && /^sl\d+$/.test(msg)) ||
+      (msg.match(/^\d+-\d+$/) &&
+        booking.step === "selecting_time_slot_additional")
     ) {
       await handleAdditionalSlotSelection(from, booking, msg);
     } else if (msg.startsWith("addslot_")) {
