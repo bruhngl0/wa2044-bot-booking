@@ -192,6 +192,12 @@ export const sendListMessageOne = async (to, bodyText, sections) => {
   });
 };
 
+export const sendUrlButtonMessage = async (to, bodyText, url, buttonText) => {
+  // This function still relies on the 'sendMessage' function
+  const message = `${bodyText}\n\n👉 *${buttonText}*: ${url}`;
+  return await sendMessage(to, message);
+};
+
 // ================================================
 // EXPORT DEFAULT
 // ================================================
@@ -338,11 +344,7 @@ export const sendListMessageOne = async (to, bodyText, sections) => {
 //================================================================================================================================
 
 // Send URL button message (WATI doesn't have native URL buttons, sticking to text + link)
-export const sendUrlButtonMessage = async (to, bodyText, url, buttonText) => {
-  // This function still relies on the 'sendMessage' function
-  const message = `${bodyText}\n\n👉 *${buttonText}*: ${url}`;
-  return await sendMessage(to, message);
-};
+
 /* utils/whatsapp.js
 import axios from "axios";
 import dotenv from "dotenv";
