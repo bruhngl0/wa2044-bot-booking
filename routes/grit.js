@@ -90,6 +90,27 @@ const isWatiEventPayload = (body = {}) => {
 };
 
 const buildMessageFromWatiEvent = (payload = {}) => {
+  // Extract interactive button/list reply
+  let interactive = null;
+
+  if (payload.interactiveButtonReply) {
+    interactive = {
+      type: "button_reply",
+      button_reply: {
+        id: payload.interactiveButtonReply.id, // Use the button ID (e.g., "1", "2")
+        title: payload.interactiveButtonReply.title,
+      },
+    };
+  } else if (payload.listReply) {
+    interactive = {
+      type: "list_reply",
+      list_reply: {
+        id: payload.listReply.id,
+        title: payload.listReply.title,
+      },
+    };
+  }
+
   return {
     from: payload.waId,
     id:
@@ -101,10 +122,9 @@ const buildMessageFromWatiEvent = (payload = {}) => {
     text: {
       body: typeof payload.text === "string" ? payload.text : "",
     },
-    interactive: payload.interactive || null,
+    interactive: interactive, // ← Pass the interactive object
   };
-};
-/*const extractMessageContent = (message) => {
+}; /*const extractMessageContent = (message) => {
   const interactive = message?.interactive || {};
   const buttonReply = interactive?.button_reply || null;
   const listReply = interactive?.list_reply || null;
@@ -1026,7 +1046,7 @@ router.post("/", async (req, res) => {
       if (!from && req.body?.from) {
         from = req.body.from;
       }
-      
+
       if (from) {
         await sendMessage(
           from,
