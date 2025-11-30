@@ -147,20 +147,25 @@ export const sendButtonsMessage = async (to, bodyText, buttons) => {
 // URL format: /api/v1/sendInteractiveListMessage?whatsappNumber=NUMBER
 // Body: { header, body, buttonText, listItems }
 // ================================================
+
 export const sendListMessage = async (to, headerText, sections) => {
   const cleanTo = to.replace(/\D/g, "");
 
-  // Extract list items from sections
-  const listItems = sections[0].rows.map((row) => ({
-    title: row.title,
-    description: row.description || "",
+  // WATI expects sections array with rows, not flat listItems
+  const formattedSections = sections.map((section) => ({
+    title: section.title || "Options",
+    rows: section.rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      description: row.description || "",
+    })),
   }));
 
   const body = {
     header: headerText,
     body: sections[0].title || "Please select an option",
-    buttonText: "View Options",
-    listItems: listItems,
+    buttonText: "Select",
+    sections: formattedSections, // ✅ CHANGED: Use 'sections' instead of 'listItems'
   };
 
   return await watiRequest(`/api/v1/sendInteractiveListMessage`, body, {
@@ -175,23 +180,56 @@ export const sendListMessage = async (to, headerText, sections) => {
 export const sendListMessageOne = async (to, bodyText, sections) => {
   const cleanTo = to.replace(/\D/g, "");
 
-  const listItems = sections[0].rows.map((row) => ({
-    title: row.title,
-    description: row.description || "",
+  const formattedSections = sections.map(section => ({
+    title: section.title || "Options",
+    rows: section.rows.map(row => ({
+      id: row.id,
+      title: row.title,
+      description: row.description || ""
+    }))
   }));
 
   const body = {
     header: sections[0].title || "Select Option",
     body: bodyText,
     buttonText: "Select",
-    listItems: listItems,
+    sections: formattedSections  // ✅ CHANGED: Use 'sections' instead of 'listItems'
   };
 
   return await watiRequest(`/api/v1/sendInteractiveListMessage`, body, {
     whatsappNumber: cleanTo,
   });
 };
+The key changes:
 
+✅ Changed listItems to sections
+✅ Properly format sections with title and rows structure
+✅ Each row has id, title, and description
+
+This matches WATI's expected format:
+json{
+  "header": "Select Date",
+  "body": "Available Dates", 
+  "buttonText": "Select",
+  "sections": [
+    {
+      "title": "Available Dates",
+      "rows": [
+        {
+          "id": "dt0",
+          "title": "Sun, 30 Nov",
+          "description": "36 slots available"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Also, I noticed there's a Google Calendar error in your logs:
+```
+getAvailableSlotsForDate error Invalid time value
+This is why it's falling back to the 36 slots. But that's a separate issue - the immediate fix for the list message will get you past this step!Claude can make mistakes. Please double-check responses.
 export const sendUrlButtonMessage = async (to, bodyText, url, buttonText) => {
   // This function still relies on the 'sendMessage' function
   const message = `${bodyText}\n\n👉 *${buttonText}*: ${url}`;
