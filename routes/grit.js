@@ -267,8 +267,8 @@ const getAvailableDates = async () => {
 
 const sendWelcomeMessage = async (to) => {
   const welcomeButtons = [
-    { id: "action_book", title: "Book A Court" },
-    { id: "action_membership", title: "Discover Memberships" },
+    { id: "1", title: "Book A Court" },
+    { id: "2", title: "Discover Memberships" },
   ];
   await sendButtonsMessage(
     to,
@@ -288,7 +288,7 @@ const sendSessionExpired = async (to) => {
 const handleWelcomeAction = async (from, booking, msg) => {
   const action = msg.split("_")[1];
 
-  if (action === "membership") {
+  if (msg === "2") {
     // Send membership link
     try {
       await sendUrlButtonMessage(
@@ -308,7 +308,7 @@ const handleWelcomeAction = async (from, booking, msg) => {
     return;
   }
 
-  if (action === "book") {
+  if (msg === "1") {
     booking.step = "collecting_name";
     await booking.save();
     await sendMessage(
@@ -973,7 +973,7 @@ router.post("/", async (req, res) => {
       await handleStartCommand(from);
     } else if (["exit", "cancel"].includes(msgLower)) {
       await handleExitCommand(from);
-    } else if (msg.startsWith("action_")) {
+    } else if (msg === "1" || msg === "2") {
       await handleWelcomeAction(from, booking, msg);
     } else if (
       booking.step === "collecting_name" &&

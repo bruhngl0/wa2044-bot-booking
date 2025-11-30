@@ -200,6 +200,7 @@ export default {
   sendButtonsMessage,
   sendListMessage,
   sendListMessageOne,
+  sendUrlButtonMessage,
 };
 
 /* import axios from "axios";
