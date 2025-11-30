@@ -128,7 +128,7 @@ export const sendButtonsMessage = async (to, bodyText, buttons) => {
   }));
 
   const body = {
-    bodyText: bodyText,
+    body: bodyText, // ← CHANGED: Use 'body' instead of 'bodyText'
     buttons: formattedButtons,
   };
 
@@ -136,7 +136,6 @@ export const sendButtonsMessage = async (to, bodyText, buttons) => {
     whatsappNumber: cleanTo,
   });
 };
-
 // ================================================
 // 3. SEND LIST MESSAGE
 // URL format: /api/v1/sendInteractiveListMessage?whatsappNumber=NUMBER
