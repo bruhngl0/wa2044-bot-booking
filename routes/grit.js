@@ -352,6 +352,7 @@ const handleNameCollection = async (from, booking, msg) => {
   ]);
 };
 
+// REPLACE the handleDateSelection function (around line 179):
 const handleDateSelection = async (from, booking, msg) => {
   console.log("Date selection detected:", msg);
 
@@ -360,8 +361,17 @@ const handleDateSelection = async (from, booking, msg) => {
     return;
   }
 
-  const selectedDate = booking.meta.dateMapping[msg];
+  // Handle WATI's transformed ID format "0-4" -> "dt4"
+  let lookupId = msg;
+  if (msg.match(/^\d+-\d+$/)) {
+    const [sectionIndex, rowIndex] = msg.split("-").map(Number);
+    lookupId = `dt${rowIndex}`;
+    console.log(`Transformed WATI ID ${msg} to ${lookupId}`);
+  }
+
+  const selectedDate = booking.meta.dateMapping[lookupId];
   if (!selectedDate) {
+    console.log(`No date found for ID: ${lookupId} (from ${msg})`);
     await sendMessage(
       from,
       'Invalid date selection. Please type "start" to try again.',
@@ -380,7 +390,6 @@ const handleDateSelection = async (from, booking, msg) => {
     {
       title: "Select Time Period",
       rows: [
-        // Your original addonsList goes here as the 'rows' property
         {
           id: "period_morning",
           title: "6 AM - 10:30 AM",
@@ -404,8 +413,6 @@ const handleDateSelection = async (from, booking, msg) => {
       ],
     },
   ]);
-
-  // Send as list for better UI
 };
 
 const handleTimePeriodSelection = async (from, booking, msg) => {
@@ -524,6 +531,8 @@ const handleSlotSelection = async (from, booking, msg) => {
   );
 };
 
+//==========================================================================================================
+
 const handleAdditionalSlotQuestion = async (from, booking, msg) => {
   const response = msg.split("_")[1];
 
@@ -532,7 +541,6 @@ const handleAdditionalSlotQuestion = async (from, booking, msg) => {
     booking.step = "selecting_time_period_additional";
     await booking.save();
 
-    //=====================================================================================================================
     await sendListMessage(from, "Select Time Period", [
       {
         title: "Select Time Period",
@@ -570,11 +578,21 @@ const handleAdditionalSlotQuestion = async (from, booking, msg) => {
   }
 };
 
+// REPLACE the handleAdditionalSlotSelection function (around line 357):
 const handleAdditionalSlotSelection = async (from, booking, msg) => {
-  const timeRange = booking.meta?.slotMapping?.[msg];
+  // Handle WATI's transformed ID format "0-4" -> "sl4"
+  let lookupId = msg;
+  if (msg.match(/^\d+-\d+$/)) {
+    const [sectionIndex, rowIndex] = msg.split("-").map(Number);
+    lookupId = `sl${rowIndex}`;
+    console.log(`Transformed WATI additional slot ID ${msg} to ${lookupId}`);
+  }
+
+  const timeRange = booking.meta?.slotMapping?.[lookupId];
   const date = booking.meta?.selectedDate;
 
   if (!timeRange || !date) {
+    console.log(`No additional slot found for ID: ${lookupId} (from ${msg})`);
     await sendSessionExpired(from);
     return;
   }
@@ -616,11 +634,12 @@ const handleAdditionalSlotSelection = async (from, booking, msg) => {
 
   await sendButtonsMessage(
     from,
-    `Slot added: ${timeRange}\n\n Your slots:\n${slotsList}\n\nWould you like to add another slot?`,
+    `Slot added: ${timeRange}\n\nYour slots:\n${slotsList}\n\nWould you like to add another slot?`,
     addSlotButtons,
   );
 };
 
+//======================================================================================================
 const showAddonSelection = async (from) => {
   await sendListMessage(from, "Select Addons", [
     {
@@ -642,6 +661,7 @@ const showAddonSelection = async (from) => {
   ]);
 };
 
+//====================================================================================================
 const handleAddonSelection = async (from, booking, msg) => {
   const addon = msg.replace("addon_", "");
 
@@ -696,6 +716,8 @@ const handleAddonSelection = async (from, booking, msg) => {
     },
   ]);
 };
+
+//==========================================================================================================
 
 const showBookingSummary = async (from, booking) => {
   const baseAmount = Number(process.env.DEFAULT_BOOKING_AMOUNT) || 1000;
@@ -765,6 +787,8 @@ const handleBookingConfirmation = async (from, booking, msg) => {
     await processPayment(from, booking);
   }
 };
+
+//=============================================================================================================
 
 const processPayment = async (from, booking) => {
   try {
