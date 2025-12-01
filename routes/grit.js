@@ -704,7 +704,20 @@ const showAddonSelection = async (from) => {
 
 //====================================================================================================
 const handleAddonSelection = async (from, booking, msg) => {
-  const addon = msg.replace("addon_", "");
+  // Handle WATI's transformed ID format "0-1" -> "addon_pool"
+  let addon = msg.replace("addon_", "");
+
+  if (msg.match(/^\d+-\d+$/)) {
+    const [sectionIndex, rowIndex] = msg.split("-").map(Number);
+    // Map row index to addon name
+    const addonMap = {
+      0: "gym",
+      1: "pool",
+      2: "none",
+    };
+    addon = addonMap[rowIndex];
+    console.log(`Transformed WATI addon ID ${msg} to addon_${addon}`);
+  }
 
   if (addon === "none") {
     booking.step = "showing_summary";
@@ -715,6 +728,7 @@ const handleAddonSelection = async (from, booking, msg) => {
 
   const selectedAddon = ADDON_PRICES[addon];
   if (!selectedAddon) {
+    console.log(`Invalid addon: ${addon} (from msg: ${msg})`);
     await sendMessage(from, "Invalid selection. Please try again.");
     return;
   }
@@ -737,7 +751,6 @@ const handleAddonSelection = async (from, booking, msg) => {
   await booking.save();
 
   // Show selection again
-  const currentAddons = booking.addons.map((a) => a.name).join(", ");
   await sendListMessageOne(from, `Added: ${selectedAddon.name}`, [
     {
       title: "Select More Addons",
@@ -757,7 +770,6 @@ const handleAddonSelection = async (from, booking, msg) => {
     },
   ]);
 };
-
 //==========================================================================================================
 
 const showBookingSummary = async (from, booking) => {
@@ -1110,16 +1122,9 @@ router.post("/", async (req, res) => {
       await handleAdditionalSlotQuestion(from, booking, mappedMsg);
     } else if (
       msg.startsWith("addon_") ||
-      (msg.match(/^[0-9]$/) && booking.step === "selecting_addons")
+      (msg.match(/^\d+-\d+$/) && booking.step === "selecting_addons")
     ) {
-      // Map WATI list index to addon ID
-      let mappedMsg = msg;
-      if (msg.match(/^\d+-\d+$/) && booking.step === "selecting_addons") {
-        const [sectionIndex, rowIndex] = msg.split("-").map(Number);
-        const addonMap = { 0: "addon_gym", 1: "addon_pool", 2: "addon_none" };
-        mappedMsg = addonMap[rowIndex] || msg;
-      }
-      await handleAddonSelection(from, booking, mappedMsg);
+      await handleAddonSelection(from, booking, msg);
     } else if (
       msg.startsWith("confirm_") ||
       (msg.match(/^[12]$/) && booking.step === "confirming_booking")
