@@ -35,6 +35,8 @@ const ADDON_PRICES = {
 const MEMBERSHIP_PAGE_URL =
   process.env.MEMBERSHIP_PAGE_URL || "https://twenty44.in/membership";
 
+const INQUIRY_URL = "https://wa.link/hl0ki3";
+
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
@@ -269,6 +271,7 @@ const sendWelcomeMessage = async (to) => {
   const welcomeButtons = [
     { id: "1", title: "Book A Court" },
     { id: "2", title: "Discover Memberships" },
+    { id: "3", title: "Have an inquiry" },
   ];
   await sendButtonsMessage(
     to,
@@ -287,6 +290,17 @@ const sendSessionExpired = async (to) => {
 
 const handleWelcomeAction = async (from, booking, msg) => {
   const action = msg.split("_")[1];
+
+  if (msg === "3")
+    try {
+      await sendUrlButtonMessage(
+        from,
+        "Tap the link to start your inquiry",
+        INQUIRY_URL,
+      );
+    } catch (e) {
+      await sendMessage(from, `Have an inquiry: ${INQUIRY_URL}`);
+    }
 
   if (msg === "2") {
     // Send membership link
