@@ -21,10 +21,10 @@ const router = express.Router();
 // ============================================================================
 
 const TIME_PERIODS = {
-  morning: { start: 6, end: 10.5, label: "6 AM – 10:30 AM", emoji: "🌅" },
-  midday: { start: 10.5, end: 15, label: "10:30 AM – 3 PM", emoji: "☀️" },
-  afternoon: { start: 15, end: 19.5, label: "3 PM – 7:30 PM", emoji: "🌤️" },
-  evening: { start: 19.5, end: 24, label: "7:30 PM – 12 AM", emoji: "🌃" },
+  morning: { start: 6, end: 10.5, label: "6 AM – 10:30 AM", emoji: "" },
+  midday: { start: 10.5, end: 15, label: "10:30 AM – 3 PM", emoji: "" },
+  afternoon: { start: 15, end: 19.5, label: "3 PM – 7:30 PM", emoji: "" },
+  evening: { start: 19.5, end: 24, label: "7:30 PM – 12 AM", emoji: "" },
 };
 
 const ADDON_PRICES = {
@@ -34,6 +34,8 @@ const ADDON_PRICES = {
 
 const MEMBERSHIP_PAGE_URL =
   process.env.MEMBERSHIP_PAGE_URL || "https://twenty44.in/membership";
+
+const INQUIRY_URL = "https://wa.link/hl0ki3";
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -295,11 +297,11 @@ const handleWelcomeAction = async (from, booking, msg) => {
       await sendUrlButtonMessage(
         from,
         "Tap the link to start your inquiry",
-        MEMBERSHIP_PAGE_URL,
+        INQUIRY_URL,
         "tap here",
       );
     } catch (e) {
-      await sendMessage(from, `Have an inquiry: ${MEMBERSHIP_PAGE_URL}`);
+      await sendMessage(from, `Have an inquiry: ${INQUIRY_URL}`);
     }
     // Reset booking for fresh start
     await Booking.deleteOne({ phone: from });
@@ -516,7 +518,7 @@ const handleTimePeriodSelection = async (from, booking, msg) => {
   booking.markModified("meta");
   await booking.save(); // ← Save again after adding slotMapping
 
-  console.log(`✅ SlotMapping saved:`, Object.keys(booking.meta.slotMapping)); // ← ADD DEBUG LOG
+  console.log(`SlotMapping saved:`, Object.keys(booking.meta.slotMapping)); // ← ADD DEBUG LOG
 
   await sendListMessage(from, "Select Time Slot", [
     {
@@ -552,7 +554,7 @@ const handleSlotSelection = async (from, booking, msg) => {
   console.log("Found date:", date);
 
   if (!timeRange || !date) {
-    console.log("❌ Session expired - missing data");
+    console.log("Session expired - missing data");
     await sendSessionExpired(from);
     return;
   }
@@ -803,14 +805,18 @@ const showBookingSummary = async (from, booking) => {
 Name: ${booking.name}
 Date: ${formattedDate}
 
+Court Price (Per Slot): ₹${baseAmount}
+
 Time Slots (${slotCount}):
-${slotsList}${addonsSummary}
+${slotsList}
+
+Slot Cost: ₹${slotsAmount}${addonsSummary}
 
 
 
 *Total Amount: ₹${totalAmount}*
 
-  `.trim();
+  `.trim();
 
   await sendMessage(from, summary);
 
@@ -829,7 +835,6 @@ ${slotsList}${addonsSummary}
   booking.totalAmount = totalAmount;
   await booking.save();
 };
-
 const handleBookingConfirmation = async (from, booking, msg) => {
   if (msg === "confirm_no") {
     await Booking.deleteOne({ phone: from });
@@ -1145,7 +1150,7 @@ router.post("/", async (req, res) => {
       }
       await handleBookingConfirmation(from, booking, mappedMsg);
     } else {
-      console.log(`❌ Unrecognized input: "${msg}" (step: ${booking.step})`);
+      console.log(`Unrecognized input: "${msg}" (step: ${booking.step})`);
       await sendMessage(
         from,
         "I didn't understand that. Type 'start' to begin or 'help' for assistance.",
