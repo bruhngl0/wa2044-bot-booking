@@ -133,7 +133,7 @@ router.post("/webhook", async (req, res) => {
       booking.step = "completed";
       await booking.save();
       const phone = booking.phone;
-      const text = `✅ Booking Confirmed!\n\nSport: ${booking.sport}\nCenter: ${booking.centre}\nDate: ${formatUserDate(booking.date)}\nTime: ${booking.time_slot}\nPlayers: ${booking.players || "-"}\nTotal: ₹${booking.totalAmount || 0}\n\nThank you!`;
+      const text = `✅ Booking Confirmed!\n\nDate: ${formatUserDate(booking.date)}\n\nTotal: ₹${booking.totalAmount || 0}\n\nThank you!`;
       try {
         await sendMessage(phone, text);
         console.log("📩 Booking confirmation sent successfully");
