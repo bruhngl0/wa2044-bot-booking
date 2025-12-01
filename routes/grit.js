@@ -778,7 +778,7 @@ const handleAddonSelection = async (from, booking, msg) => {
 }; //==========================================================================================================
 
 const showBookingSummary = async (from, booking) => {
-  const baseAmount = Number(process.env.DEFAULT_BOOKING_AMOUNT) || 1000;
+  const baseAmount = Number(process.env.DEFAULT_BOOKING_AMOUNT) || 1;
   const slotCount = booking.meta?.bookedSlots?.length || 1;
   const slotsAmount = baseAmount * slotCount;
   const addonAmount = (booking.addons || []).reduce(
