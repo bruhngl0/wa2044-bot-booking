@@ -1057,7 +1057,10 @@ router.post("/", async (req, res) => {
       await handleStartCommand(from);
     } else if (["exit", "cancel"].includes(msgLower)) {
       await handleExitCommand(from);
-    } else if ((msg === "1" || msg === "2") && booking.step === "welcome") {
+    } else if (
+      (msg === "1" || msg === "2" || msg === "3") &&
+      booking.step === "welcome"
+    ) {
       await handleWelcomeAction(from, booking, msg);
     } else if (
       booking.step === "collecting_name" &&
