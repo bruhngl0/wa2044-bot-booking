@@ -1097,20 +1097,41 @@ router.post("/", async (req, res) => {
       await booking.save();
       await handleTimePeriodSelection(from, booking, msg);
     } else if (
-      msg.startsWith("addslot_") &&
-      booking.step === "asking_additional_slot"
+      msg.startsWith("addslot_") ||
+      (msg.match(/^[12]$/) && booking.step === "asking_additional_slot")
     ) {
-      await handleAdditionalSlotQuestion(from, booking, msg);
+      // Map WATI button index to original ID
+      let mappedMsg = msg;
+      if (msg === "1" && booking.step === "asking_additional_slot") {
+        mappedMsg = "addslot_yes";
+      } else if (msg === "2" && booking.step === "asking_additional_slot") {
+        mappedMsg = "addslot_no";
+      }
+      await handleAdditionalSlotQuestion(from, booking, mappedMsg);
     } else if (
-      (msg.startsWith("addon_") || msg.match(/^\d+-\d+$/)) &&
-      booking.step === "selecting_addons"
+      msg.startsWith("addon_") ||
+      (msg.match(/^[0-9]$/) && booking.step === "selecting_addons")
     ) {
-      await handleAddonSelection(from, booking, msg);
+      // Map WATI list index to addon ID
+      let mappedMsg = msg;
+      if (msg.match(/^\d+-\d+$/) && booking.step === "selecting_addons") {
+        const [sectionIndex, rowIndex] = msg.split("-").map(Number);
+        const addonMap = { 0: "addon_gym", 1: "addon_pool", 2: "addon_none" };
+        mappedMsg = addonMap[rowIndex] || msg;
+      }
+      await handleAddonSelection(from, booking, mappedMsg);
     } else if (
-      msg.startsWith("confirm_") &&
-      booking.step === "confirming_booking"
+      msg.startsWith("confirm_") ||
+      (msg.match(/^[12]$/) && booking.step === "confirming_booking")
     ) {
-      await handleBookingConfirmation(from, booking, msg);
+      // Map WATI button index to confirmation ID
+      let mappedMsg = msg;
+      if (msg === "1" && booking.step === "confirming_booking") {
+        mappedMsg = "confirm_yes";
+      } else if (msg === "2" && booking.step === "confirming_booking") {
+        mappedMsg = "confirm_no";
+      }
+      await handleBookingConfirmation(from, booking, mappedMsg);
     } else {
       console.log(`❌ Unrecognized input: "${msg}" (step: ${booking.step})`);
       await sendMessage(
