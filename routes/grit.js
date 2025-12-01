@@ -538,9 +538,41 @@ const handleSlotSelection = async (from, booking, msg) => {
     await sendSessionExpired(from);
     return;
   }
+
+  // ... rest of the function
+
+  // Check availability
+  const available = await isSlotAvailable(date, timeRange);
+  if (!available) {
+    await sendMessage(
+      from,
+      "Sorry, this slot is no longer available. Please select a different time slot.",
+    );
+    return;
+  }
+  // Store first slot
+  if (!booking.meta.bookedSlots) {
+    booking.meta.bookedSlots = [];
+  }
+  booking.meta.bookedSlots.push(timeRange);
+
+  booking.step = "asking_additional_slot";
+  booking.markModified("meta");
+  await booking.save();
+
+  // Ask if they want to add another slot
+  const addSlotButtons = [
+    { id: "addslot_yes", title: "Yes, add another" },
+    { id: "addslot_no", title: "No, continue" },
+  ];
+
+  await sendButtonsMessage(
+    from,
+    `Slot added: ${timeRange}\n\nWould you like to add an additional slot?`,
+    addSlotButtons,
+  );
 };
 
-// ... rest of the function
 //==========================================================================================================
 
 const handleAdditionalSlotQuestion = async (from, booking, msg) => {
