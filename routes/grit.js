@@ -720,6 +720,7 @@ const handleAddonSelection = async (from, booking, msg) => {
   }
 
   if (addon === "none") {
+    // User selected "None" - go directly to summary
     booking.step = "showing_summary";
     await booking.save();
     await showBookingSummary(from, booking);
@@ -748,29 +749,13 @@ const handleAddonSelection = async (from, booking, msg) => {
 
   // Add addon
   booking.addons.push(selectedAddon);
+
+  // ← CHANGED: Go directly to summary instead of showing addon selection again
+  booking.step = "showing_summary";
   await booking.save();
 
-  // Show selection again
-  await sendListMessageOne(from, `Added: ${selectedAddon.name}`, [
-    {
-      title: "Select More Addons",
-      rows: [
-        {
-          id: "addon_gym",
-          title: "Gym Access",
-          description: "₹2,000 (Steam / Sauna)",
-        },
-        {
-          id: "addon_pool",
-          title: "Pool Access",
-          description: "₹2,000 (Steam / Sauna)",
-        },
-        { id: "addon_none", title: "None", description: "Continue to payment" },
-      ],
-    },
-  ]);
-};
-//==========================================================================================================
+  await showBookingSummary(from, booking);
+}; //==========================================================================================================
 
 const showBookingSummary = async (from, booking) => {
   const baseAmount = Number(process.env.DEFAULT_BOOKING_AMOUNT) || 1000;
@@ -802,6 +787,7 @@ Date: ${formattedDate}
 
 Time Slots (${slotCount}):
 ${slotsList}${addonsSummary}
+
 
 
 *Total Amount: ₹${totalAmount}*
