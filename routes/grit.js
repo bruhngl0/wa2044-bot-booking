@@ -512,16 +512,16 @@ const handleTimePeriodSelection = async (from, booking, msg) => {
 
 const handleSlotSelection = async (from, booking, msg) => {
   // Add debug logging
-  console.log('=== SLOT SELECTION DEBUG ===');
-  console.log('Original msg:', msg);
-  console.log('Booking meta:', JSON.stringify(booking.meta, null, 2));
-  console.log('Has slotMapping?', !!booking.meta?.slotMapping);
-  console.log('Has selectedDate?', !!booking.meta?.selectedDate);
-  
+  console.log("=== SLOT SELECTION DEBUG ===");
+  console.log("Original msg:", msg);
+  console.log("Booking meta:", JSON.stringify(booking.meta, null, 2));
+  console.log("Has slotMapping?", !!booking.meta?.slotMapping);
+  console.log("Has selectedDate?", !!booking.meta?.selectedDate);
+
   // Handle WATI's transformed ID format "0-4" -> "sl4"
   let lookupId = msg;
   if (msg.match(/^\d+-\d+$/)) {
-    const [sectionIndex, rowIndex] = msg.split('-').map(Number);
+    const [sectionIndex, rowIndex] = msg.split("-").map(Number);
     lookupId = `sl${rowIndex}`;
     console.log(`Transformed WATI slot ID ${msg} to ${lookupId}`);
   }
@@ -529,17 +529,18 @@ const handleSlotSelection = async (from, booking, msg) => {
   const timeRange = booking.meta?.slotMapping?.[lookupId];
   const date = booking.meta?.selectedDate;
 
-  console.log('Looking up slot:', lookupId);
-  console.log('Found timeRange:', timeRange);
-  console.log('Found date:', date);
+  console.log("Looking up slot:", lookupId);
+  console.log("Found timeRange:", timeRange);
+  console.log("Found date:", date);
 
   if (!timeRange || !date) {
-    console.log('❌ Session expired - missing data');
+    console.log("❌ Session expired - missing data");
     await sendSessionExpired(from);
     return;
   }
-  
-  // ... rest of the function
+};
+
+// ... rest of the function
 //==========================================================================================================
 
 const handleAdditionalSlotQuestion = async (from, booking, msg) => {
