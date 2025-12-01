@@ -35,8 +35,6 @@ const ADDON_PRICES = {
 const MEMBERSHIP_PAGE_URL =
   process.env.MEMBERSHIP_PAGE_URL || "https://twenty44.in/membership";
 
-const INQUIRY_URL = "https://wa.link/hl0ki3";
-
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
@@ -291,16 +289,22 @@ const sendSessionExpired = async (to) => {
 const handleWelcomeAction = async (from, booking, msg) => {
   const action = msg.split("_")[1];
 
-  if (msg === "3")
+  if (msg === "3") {
+    // Send membership link
     try {
       await sendUrlButtonMessage(
         from,
         "Tap the link to start your inquiry",
-        INQUIRY_URL,
+        MEMBERSHIP_PAGE_URL,
+        "tap here",
       );
     } catch (e) {
-      await sendMessage(from, `Have an inquiry: ${INQUIRY_URL}`);
+      await sendMessage(from, `Have an inquiry: ${MEMBERSHIP_PAGE_URL}`);
     }
+    // Reset booking for fresh start
+    await Booking.deleteOne({ phone: from });
+    return;
+  }
 
   if (msg === "2") {
     // Send membership link
