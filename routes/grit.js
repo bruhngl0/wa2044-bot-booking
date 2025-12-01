@@ -511,47 +511,35 @@ const handleTimePeriodSelection = async (from, booking, msg) => {
 //===============================================================================================================================
 
 const handleSlotSelection = async (from, booking, msg) => {
-  const timeRange = booking.meta?.slotMapping?.[msg];
+  // Add debug logging
+  console.log('=== SLOT SELECTION DEBUG ===');
+  console.log('Original msg:', msg);
+  console.log('Booking meta:', JSON.stringify(booking.meta, null, 2));
+  console.log('Has slotMapping?', !!booking.meta?.slotMapping);
+  console.log('Has selectedDate?', !!booking.meta?.selectedDate);
+  
+  // Handle WATI's transformed ID format "0-4" -> "sl4"
+  let lookupId = msg;
+  if (msg.match(/^\d+-\d+$/)) {
+    const [sectionIndex, rowIndex] = msg.split('-').map(Number);
+    lookupId = `sl${rowIndex}`;
+    console.log(`Transformed WATI slot ID ${msg} to ${lookupId}`);
+  }
+
+  const timeRange = booking.meta?.slotMapping?.[lookupId];
   const date = booking.meta?.selectedDate;
 
+  console.log('Looking up slot:', lookupId);
+  console.log('Found timeRange:', timeRange);
+  console.log('Found date:', date);
+
   if (!timeRange || !date) {
+    console.log('❌ Session expired - missing data');
     await sendSessionExpired(from);
     return;
   }
-
-  // Check availability
-  const available = await isSlotAvailable(date, timeRange);
-  if (!available) {
-    await sendMessage(
-      from,
-      "Sorry, this slot is no longer available. Please select a different time slot.",
-    );
-    return;
-  }
-
-  // Store first slot
-  if (!booking.meta.bookedSlots) {
-    booking.meta.bookedSlots = [];
-  }
-  booking.meta.bookedSlots.push(timeRange);
-
-  booking.step = "asking_additional_slot";
-  booking.markModified("meta");
-  await booking.save();
-
-  // Ask if they want to add another slot
-  const addSlotButtons = [
-    { id: "addslot_yes", title: "Yes, add another" },
-    { id: "addslot_no", title: "No, continue" },
-  ];
-
-  await sendButtonsMessage(
-    from,
-    `Slot added: ${timeRange}\n\nWould you like to add an additional slot?`,
-    addSlotButtons,
-  );
-};
-
+  
+  // ... rest of the function
 //==========================================================================================================
 
 const handleAdditionalSlotQuestion = async (from, booking, msg) => {
