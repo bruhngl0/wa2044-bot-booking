@@ -7,6 +7,7 @@ const bookingSchema = new mongoose.Schema(
     centre: String,
     date: String, // YYYY-MM-DD
     time_slot: String, // e.g. "11:00 - 12:00"
+    booked_slots: [String],
     players: Number,
     addons: [
       {
@@ -26,8 +27,28 @@ const bookingSchema = new mongoose.Schema(
 // Index on phone (non-unique) - for quick user lookup
 bookingSchema.index({ phone: 1 });
 
+bookingSchema.index(
+  { date: 1, time_slot: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { paid: true },
+    name: "unique_paid_primary_slot",
+  },
+);
+
+bookingSchema.index(
+  { date: 1, booked_slots: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { paid: true },
+    name: "unique_paid_booked_slots",
+  },
+);
+
 // Partial unique index: Only enforce uniqueness for PAID bookings
 // This allows multiple incomplete bookings but prevents double-booking of paid slots
+
+/*
 bookingSchema.index(
   { centre: 1, sport: 1, date: 1, time_slot: 1 }, //how is everything up to date
   {
@@ -36,7 +57,7 @@ bookingSchema.index(
     name: "unique_paid_slot",
   },
 );
-
+*/
 const Booking =
   mongoose.models.Booking || mongoose.model("Booking", bookingSchema);
 

@@ -64,6 +64,8 @@ const isSlotAvailable = async (date, timeSlot) => {
   }
 };
 
+//=========================================================================
+
 const extractMessageContent = (message) => {
   // WATI webhook has similar structure to WhatsApp Cloud API
   const interactive = message?.interactive || {};
@@ -338,6 +340,8 @@ const handleWelcomeAction = async (from, booking, msg) => {
   }
 };
 
+//==================================================================================================================
+
 const handleNameCollection = async (from, booking, msg) => {
   if (!msg || msg.trim().length < 2) {
     await sendMessage(from, "Please enter a valid full name:");
@@ -371,6 +375,8 @@ const handleNameCollection = async (from, booking, msg) => {
     { title: "Available Dates", rows: dateRows },
   ]);
 };
+
+//================================================================================================================
 
 // REPLACE the handleDateSelection function (around line 179):
 const handleDateSelection = async (from, booking, msg) => {
@@ -434,6 +440,8 @@ const handleDateSelection = async (from, booking, msg) => {
     },
   ]);
 };
+
+//=====================================================================================================
 
 const handleTimePeriodSelection = async (from, booking, msg) => {
   // Handle WATI's transformed ID format "0-1" -> "period_midday"
@@ -639,6 +647,8 @@ const handleAdditionalSlotQuestion = async (from, booking, msg) => {
   }
 };
 
+//=====================================================================================================================
+
 // REPLACE the handleAdditionalSlotSelection function (around line 357):
 const handleAdditionalSlotSelection = async (from, booking, msg) => {
   // Handle WATI's transformed ID format "0-4" -> "sl4"
@@ -775,7 +785,9 @@ const handleAddonSelection = async (from, booking, msg) => {
   await booking.save();
 
   await showBookingSummary(from, booking);
-}; //==========================================================================================================
+};
+
+//==========================================================================================================
 
 const showBookingSummary = async (from, booking) => {
   const baseAmount = Number(process.env.DEFAULT_BOOKING_AMOUNT) || 1000;
