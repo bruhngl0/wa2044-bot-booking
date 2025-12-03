@@ -1074,25 +1074,7 @@ router.post("/", async (req, res) => {
       await handleStartCommand(from);
     } else if (["exit", "cancel"].includes(msgLower)) {
       await handleExitCommand(from);
-    }
-
-    // NOW check if booking exists
-    if (!booking) {
-      booking = new Booking({ phone: from, step: "welcome", meta: {} });
-      await booking.save();
-      console.log("Created new booking record:", booking._id?.toString());
-      await sendWelcomeMessage(from);
-      return res.sendStatus(200);
-    }
-
-    // Check for duplicate messages
-    if (isDuplicateMessage(booking, messageId)) {
-      console.log("Duplicate webhook ignored", messageId);
-      return res.sendStatus(200);
-    }
-    await markMessageAsProcessed(booking, messageId);
-
-    if (
+    } else if (
       (msg === "1" || msg === "2" || msg === "3") &&
       booking.step === "welcome"
     ) {
